@@ -19,7 +19,8 @@ class DeepLinkHandler {
       AeLinkLogger.info('Initializing deep link handler');
 
       // Check for initial link if app was opened from a deep link
-      final initialUri = await _appLinks.getInitialAppLink();
+      // app_links v6: getInitialAppLink() renamed to getInitialLink()
+      final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
         AeLinkLogger.info('Initial deep link: $initialUri');
         _handleDeepLink(initialUri);
