@@ -1,0 +1,165 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../config.dart';
+import '../models/deep_link_data.dart';
+import '../models/device_fingerprint.dart';
+import '../models/link_params.dart';
+import '../utils/logger.dart';
+
+/// Service for API calls related to deferred deep linking
+class DeferredLinkService {
+  final AeLinkConfig config;
+  late http.Client _httpClient;
+
+  DeferredLinkService({required this.config}) {
+    _httpClient = http.Client();
+  }
+
+  /// Match device fingerprint against stored deferred links
+  ///
+  /// The server identifies the tenant from the X-API-Key header,
+  /// so we don't need to send tenantId in the body.
+  Future<DeepLinkData?> matchFingerprint(DeviceFingerprint fingerprint) async {
+    try {
+      AeLinkLogger.info('Attempting to match device fingerprint');
+
+      final url =
+          Uri.parse('${config.apiBaseUrl}/api/v1/deferred/match');
+      final body = jsonEncode({
+        'fingerprint': fingerprint.toJson(),
+      });
+
+      AeLinkLogger.debug('POST ${url.toString()}');
+
+      final response = await _httpClient
+          .post(
+            url,
+            headers: config.getHeaders(),
+            body: body,
+          )
+          .timeout(
+            Duration(seconds: config.requestTimeoutSeconds),
+            onTimeout: () {
+              throw TimeoutException(
+                'Deferred link matching request timed out after ${config.requestTimeoutSeconds}s',
+              );
+            },
+          );
+
+      AeLinkLogger.debug('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+
+        if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+          final data = jsonResponse['data'] as Map<String, dynamic>;
+
+          // Check if a match was found
+          if (data['matched'] != true) {
+            AeLinkLogger.info('No matching deferred link found');
+            return null;
+          }
+
+          final linkData = _parseDeepLinkResponse(data);
+          AeLinkLogger.info('Deferred link match found: ${linkData.deferredLinkId}');
+          return linkData;
+        }
+      } else if (response.statusCode == 401) {
+        AeLinkLogger.warning('Unauthorized — check your API key');
+        return null;
+      } else {
+        AeLinkLogger.warning(
+          'Failed to match fingerprint: ${response.statusCode} ${response.body}',
+        );
+        return null;
+      }
+    } catch (e, stackTrace) {
+      AeLinkLogger.errorWithStackTrace('Error matching fingerprint', e, stackTrace);
+      return null;
+    }
+    return null;
+  }
+
+  /// Confirm that a deferred link was shown to the user
+  Future<bool> confirmDeepLink(String deferredLinkId) async {
+    try {
+      AeLinkLogger.info('Confirming deferred link: $deferredLinkId');
+
+      final url = Uri.parse('${config.apiBaseUrl}/api/v1/deferred/confirm');
+      final body = jsonEncode({
+        'deferredLinkId': deferredLinkId,
+        'deviceId': config.tenantApiKey.hashCode.toString(),
+      });
+
+      AeLinkLogger.debug('POST ${url.toString()}');
+
+      final response = await _httpClient
+          .post(
+            url,
+            headers: config.getHeaders(),
+            body: body,
+          )
+          .timeout(
+            Duration(seconds: config.requestTimeoutSeconds),
+            onTimeout: () {
+              throw TimeoutException(
+                'Deferred link confirmation request timed out after ${config.requestTimeoutSeconds}s',
+              );
+            },
+          );
+
+      AeLinkLogger.debug('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+        final success = jsonResponse['success'] as bool? ?? false;
+        if (success) {
+          AeLinkLogger.info('Deferred link confirmed successfully');
+        }
+        return success;
+      } else {
+        AeLinkLogger.warning(
+          'Failed to confirm deferred link: ${response.statusCode}',
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      AeLinkLogger.errorWithStackTrace('Error confirming deferred link', e, stackTrace);
+      return false;
+    }
+  }
+
+  /// Parse deep link response from API
+  ///
+  /// The API returns camelCase keys:
+  /// { matched, deferredLinkId, linkId, params, destinationUrl, matchScore }
+  DeepLinkData _parseDeepLinkResponse(Map<String, dynamic> data) {
+    final params = data['params'] as Map<String, dynamic>?;
+
+    return DeepLinkData(
+      linkId: data['linkId'] as String?,
+      deferredLinkId: data['deferredLinkId'] as String?,
+      eventId: params?['eventId'] as String?,
+      action: params?['action'] as String?,
+      destinationUrl: data['destinationUrl'] as String?,
+      linkParams: params != null ? LinkParams.fromJson(params) : null,
+      isDeferred: true,
+      clickedAt: DateTime.now(),
+    );
+  }
+
+  /// Dispose resources
+  void dispose() {
+    _httpClient.close();
+  }
+}
+
+/// Exception for timeout errors
+class TimeoutException implements Exception {
+  final String message;
+
+  TimeoutException(this.message);
+
+  @override
+  String toString() => 'TimeoutException: $message';
+}

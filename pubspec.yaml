@@ -1,0 +1,44 @@
+name: ae_link
+description: Flutter SDK for integrating with the AE-LINK deferred deep linking platform. Enables collection of device fingerprints, matching with stored deep links, and handling of deferred deep links.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # API and HTTP
+  http: ^1.1.0
+
+  # Local storage
+  shared_preferences: ^2.2.2
+
+  # Device information
+  device_info_plus: ^9.1.1
+  package_info_plus: ^4.2.0
+
+  # Deep linking
+  app_links: ^3.4.5
+
+  # Network connectivity
+  connectivity_plus: ^5.1.0
+
+  # UUID generation
+  uuid: ^4.0.0
+
+  # Logging
+  logger: ^2.0.2+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  mockito: ^5.4.4
+  mocktail: ^1.0.0
+
+flutter:
+  # This library is a plugin; don't include it as a Flutter plugin.
