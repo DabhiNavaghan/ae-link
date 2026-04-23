@@ -1,6 +1,10 @@
+/// Default AE-LINK API base URL
+const String kAeLinkDefaultBaseUrl = 'https://aelink.vercel.app';
+
 /// Configuration for the AE-LINK SDK
 class AeLinkConfig {
-  /// The base URL of the AE-LINK API (e.g., 'https://allevents.in')
+  /// The base URL of the AE-LINK API
+  /// Defaults to 'https://aelink.vercel.app'
   final String apiBaseUrl;
 
   /// The API key for authentication with the AE-LINK backend
@@ -19,8 +23,11 @@ class AeLinkConfig {
   final Map<String, String>? customHeaders;
 
   /// Create a new AeLinkConfig instance
+  ///
+  /// Only [tenantApiKey] is required. The [apiBaseUrl] defaults to
+  /// 'https://aelink.vercel.app'.
   AeLinkConfig({
-    required this.apiBaseUrl,
+    this.apiBaseUrl = kAeLinkDefaultBaseUrl,
     required this.tenantApiKey,
     this.debug = false,
     this.requestTimeoutSeconds = 30,

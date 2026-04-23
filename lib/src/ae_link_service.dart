@@ -18,7 +18,6 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// Usage in main.dart:
 /// ```dart
 /// final aeLink = AeLinkService(
-///   apiBaseUrl: 'https://aelink.vercel.app',
 ///   apiKey: 'your-api-key',
 ///   onDeepLink: (data) {
 ///     // Navigate based on data.eventId, data.action, etc.
@@ -27,7 +26,7 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// await aeLink.initialize();
 /// ```
 class AeLinkService {
-  /// Backend API base URL
+  /// Backend API base URL (defaults to https://aelink.vercel.app)
   final String apiBaseUrl;
 
   /// Tenant API key from the AE-LINK dashboard
@@ -52,7 +51,7 @@ class AeLinkService {
   bool _initialized = false;
 
   AeLinkService({
-    required this.apiBaseUrl,
+    this.apiBaseUrl = kAeLinkDefaultBaseUrl,
     required this.apiKey,
     required this.onDeepLink,
     this.onError,
