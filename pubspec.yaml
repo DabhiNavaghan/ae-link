@@ -18,14 +18,14 @@ dependencies:
   shared_preferences: ^2.5.0
 
   # Device information
-  device_info_plus: ^11.0.0
-  package_info_plus: ^8.0.0
+  device_info_plus: ^10.1.0
+  package_info_plus: ^5.0.1
 
   # Deep linking
-  app_links: ^6.4.0
+  app_links: ^5.1.0
 
   # Network connectivity
-  connectivity_plus: ^6.1.0
+  connectivity_plus: ^6.0.0
 
   # UUID generation
   uuid: ^4.5.0
