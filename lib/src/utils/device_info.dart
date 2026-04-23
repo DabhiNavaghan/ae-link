@@ -99,7 +99,7 @@ class DeviceInfoHelper {
 
   /// Get device locale (matches browser's navigator.language format: "en-US")
   static String getLocale() {
-    final locale = PlatformDispatcher.instance.locale;
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
     // Use hyphen separator to match browser format (navigator.language = "en-US")
     return '${locale.languageCode}-${locale.countryCode}';
   }
