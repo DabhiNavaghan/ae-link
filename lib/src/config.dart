@@ -19,6 +19,15 @@ class AeLinkConfig {
   /// Whether to automatically handle incoming deep links
   final bool autoHandleDeepLinks;
 
+  /// Set to true if you're adding AE-LINK SDK to an existing app
+  /// that already has users. This tells the SDK to skip deferred link
+  /// checking for existing users and correctly reports them as
+  /// 'return_user' instead of 'first_install'.
+  ///
+  /// Tip: set this based on whether the user is already logged in
+  /// or has existing app data.
+  final bool isExistingUser;
+
   /// Custom headers to include in all API requests
   final Map<String, String>? customHeaders;
 
@@ -32,6 +41,7 @@ class AeLinkConfig {
     this.debug = false,
     this.requestTimeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
+    this.isExistingUser = false,
     this.customHeaders,
   });
 

@@ -47,6 +47,20 @@ class AeLinkService {
   /// Auto-listen for Universal Links / App Links
   final bool autoHandleDeepLinks;
 
+  /// Set to true when adding AE-LINK to an app that already has users.
+  /// This prevents existing users from being treated as new installs
+  /// and skips deferred link checking for them.
+  ///
+  /// Example: set based on whether the user is logged in:
+  /// ```dart
+  /// AeLinkService(
+  ///   apiKey: 'KEY',
+  ///   isExistingUser: authService.isLoggedIn,
+  ///   onDeepLink: (data) { ... },
+  /// )
+  /// ```
+  final bool isExistingUser;
+
   StreamSubscription<DeepLinkData>? _deepLinkSubscription;
   bool _initialized = false;
 
@@ -58,6 +72,7 @@ class AeLinkService {
     this.debug = false,
     this.timeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
+    this.isExistingUser = false,
   });
 
   /// Initialize the SDK, check for deferred deep links, and start listening.
@@ -82,6 +97,7 @@ class AeLinkService {
           debug: debug,
           requestTimeoutSeconds: timeoutSeconds,
           autoHandleDeepLinks: autoHandleDeepLinks,
+          isExistingUser: isExistingUser,
         ),
       );
 

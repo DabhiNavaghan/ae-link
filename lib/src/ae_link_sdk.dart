@@ -69,6 +69,18 @@ class AeLinkSdk {
       sdk._deferredLinkService = DeferredLinkService(config: config);
       sdk._deepLinkHandler = DeepLinkHandler();
 
+      // If adding SDK to an existing app with existing users,
+      // mark first launch as done so we don't try deferred linking for them
+      if (config.isExistingUser) {
+        final prefs = sdk._storageService;
+        // Check raw value — isFirstLaunch() would mark it as done
+        final alreadyMarked = prefs.getDeviceId() != null;
+        if (!alreadyMarked) {
+          await prefs.markFirstLaunchComplete();
+          AeLinkLogger.info('Existing user — will skip deferred link check');
+        }
+      }
+
       // ── STEP 1: Validate API key + register launch (BLOCKING) ──
       await _validateAndRegister();
 
@@ -139,7 +151,8 @@ class AeLinkSdk {
         'deviceManufacturer': await DeviceInfoHelper.getDeviceManufacturer(),
         'locale': DeviceInfoHelper.getLocale(),
         'timezone': DeviceInfoHelper.getTimezone(),
-        'isFirstLaunch': isFirstLaunch,
+        'isFirstLaunch': isFirstLaunch && !_config.isExistingUser,
+        'isExistingUser': _config.isExistingUser,
       });
 
       final response = await http.Client()
