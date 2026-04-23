@@ -4,41 +4,41 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: '>=3.3.0 <5.0.0'
-  flutter: '>=3.19.0'
+  sdk: '>=3.0.0 <5.0.0'
+  flutter: '>=3.10.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # API and HTTP
-  http: ">=1.1.0 <2.0.0"
+  # API and HTTP — stable API since 1.x
+  http: '>=1.0.0'
 
-  # Local storage
-  shared_preferences: ">=2.2.0 <3.0.0"
+  # Local storage — stable API since 2.x
+  shared_preferences: '>=2.0.0'
 
-  # Device information
-  device_info_plus: ">=9.0.0 <13.0.0"
-  package_info_plus: ">=4.0.0 <10.0.0"
+  # Device information — stable API across 9-12+
+  device_info_plus: '>=9.0.0'
+  package_info_plus: '>=4.0.0'
 
-  # Deep linking
-  app_links: ">=3.4.0 <6.0.0"
+  # Deep linking — SDK handles both v3-5 and v6+ APIs at runtime
+  app_links: '>=3.4.0'
 
-  # Network connectivity
-  connectivity_plus: ">=5.0.0 <7.0.0"
+  # Network connectivity — List<ConnectivityResult> since v5
+  connectivity_plus: '>=5.0.0'
 
   # UUID generation
-  uuid: ^4.5.0
+  uuid: '>=4.0.0'
 
   # Logging
-  logger: ^2.5.0
+  logger: '>=2.0.0'
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  mockito: ^5.4.5
-  mocktail: ^1.0.4
+  flutter_lints: '>=2.0.0'
+  mockito: '>=5.0.0'
+  mocktail: '>=1.0.0'
 
 flutter:
   # This library is a plugin; don't include it as a Flutter plugin.

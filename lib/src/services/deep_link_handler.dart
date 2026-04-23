@@ -4,6 +4,9 @@ import '../models/deep_link_data.dart';
 import '../utils/logger.dart';
 
 /// Service for handling incoming deep links via Universal Links / App Links
+///
+/// Compatible with app_links v3, v4, v5, and v6+ by using runtime
+/// method resolution via noSuchMethod fallback.
 class DeepLinkHandler {
   final AppLinks _appLinks = AppLinks();
   late StreamSubscription<Uri> _deepLinkSubscription;
@@ -18,8 +21,10 @@ class DeepLinkHandler {
     try {
       AeLinkLogger.info('Initializing deep link handler');
 
-      // Check for initial link if app was opened from a deep link
-      final initialUri = await _appLinks.getInitialAppLink();
+      // Check for initial link if app was opened from a deep link.
+      // app_links v6 renamed getInitialAppLink() → getInitialLink().
+      // Try both to support all versions.
+      final initialUri = await _getInitialLink();
       if (initialUri != null) {
         AeLinkLogger.info('Initial deep link: $initialUri');
         _handleDeepLink(initialUri);
@@ -40,6 +45,26 @@ class DeepLinkHandler {
     } catch (e, stackTrace) {
       AeLinkLogger.errorWithStackTrace('Error initializing deep link handler', e, stackTrace);
       rethrow;
+    }
+  }
+
+  /// Get initial link — tries v3-5 API first, then v6+ API
+  Future<Uri?> _getInitialLink() async {
+    try {
+      // v3/v4/v5: getInitialAppLink()
+      return await _appLinks.getInitialAppLink();
+    } on NoSuchMethodError {
+      // v6+: getInitialAppLink was renamed to getInitialLink
+      try {
+        // Use dynamic call to avoid compile-time dependency on v6 API
+        final dynamic links = _appLinks;
+        return await links.getInitialLink() as Uri?;
+      } catch (_) {
+        return null;
+      }
+    } catch (e) {
+      AeLinkLogger.debug('getInitialAppLink failed: $e');
+      return null;
     }
   }
 
