@@ -230,15 +230,17 @@ class AeLinkSdk {
     try {
       final isFirstLaunch = await sdk._storageService.isFirstLaunch();
       if (!isFirstLaunch) {
-        AeLinkLogger.debug('Not first launch, skipping deferred check');
         return null;
       }
 
-      AeLinkLogger.info('Checking for deferred deep link...');
+      AeLinkLogger.info('First launch — checking deferred link...');
 
       final fingerprint = await sdk._fingerprintService.collectFingerprint();
       final deferredLink =
           await sdk._deferredLinkService.matchFingerprint(fingerprint);
+
+      // Mark first launch as done AFTER checking
+      await sdk._storageService.markFirstLaunchComplete();
 
       if (deferredLink != null) {
         sdk._lastDeepLink = deferredLink;

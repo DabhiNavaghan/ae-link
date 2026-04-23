@@ -19,12 +19,10 @@ class DeepLinkHandler {
   /// Initialize deep link listener
   Future<void> initialize() async {
     try {
-      AeLinkLogger.info('Initializing deep link handler');
-
       // Check for initial link if app was opened from a deep link
       final initialUri = await _getInitialLink();
       if (initialUri != null) {
-        AeLinkLogger.info('Initial deep link: $initialUri');
+        AeLinkLogger.info('App opened via deep link: $initialUri');
         _handleDeepLink(initialUri);
       }
 
@@ -35,11 +33,9 @@ class DeepLinkHandler {
           _handleDeepLink(uri);
         },
         onError: (err) {
-          AeLinkLogger.error('Error listening to deep links', err);
+          AeLinkLogger.error('Deep link error', err);
         },
       );
-
-      AeLinkLogger.info('Deep link handler initialized');
     } catch (e, stackTrace) {
       AeLinkLogger.errorWithStackTrace(
           'Error initializing deep link handler', e, stackTrace);

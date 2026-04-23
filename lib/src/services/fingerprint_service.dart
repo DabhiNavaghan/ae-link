@@ -13,7 +13,7 @@ class FingerprintService {
 
   /// Collect device fingerprint
   Future<DeviceFingerprint> collectFingerprint() async {
-    AeLinkLogger.info('Collecting device fingerprint');
+    AeLinkLogger.debug('Collecting fingerprint...');
 
     try {
       // Get or create device ID

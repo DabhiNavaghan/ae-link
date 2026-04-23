@@ -15,15 +15,13 @@ class StorageService {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  /// Check if this is the first launch after app install
+  /// Check if this is the first launch after app install.
+  /// Read-only — does NOT mark as done. Call [markFirstLaunchComplete]
+  /// after you've finished the deferred link check.
   Future<bool> isFirstLaunch() async {
     final value = _prefs.getBool(_keyFirstLaunch);
-    if (value == null) {
-      // First launch detected, mark as done
-      await _prefs.setBool(_keyFirstLaunch, false);
-      return true;
-    }
-    return value;
+    // null means never set = first launch
+    return value == null || value == true;
   }
 
   /// Mark first launch as complete

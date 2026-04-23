@@ -21,15 +21,11 @@ class DeferredLinkService {
   /// so we don't need to send tenantId in the body.
   Future<DeepLinkData?> matchFingerprint(DeviceFingerprint fingerprint) async {
     try {
-      AeLinkLogger.info('Attempting to match device fingerprint');
-
       final url =
           Uri.parse('${config.apiBaseUrl}/api/v1/deferred/match');
       final body = jsonEncode({
         'fingerprint': fingerprint.toJson(),
       });
-
-      AeLinkLogger.debug('POST ${url.toString()}');
 
       final response = await _httpClient
           .post(
@@ -46,23 +42,17 @@ class DeferredLinkService {
             },
           );
 
-      AeLinkLogger.debug('Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
 
         if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
           final data = jsonResponse['data'] as Map<String, dynamic>;
 
-          // Check if a match was found
           if (data['matched'] != true) {
-            AeLinkLogger.info('No matching deferred link found');
             return null;
           }
 
-          final linkData = _parseDeepLinkResponse(data);
-          AeLinkLogger.info('Deferred link match found: ${linkData.deferredLinkId}');
-          return linkData;
+          return _parseDeepLinkResponse(data);
         }
       } else if (response.statusCode == 401) {
         AeLinkLogger.warning('Unauthorized — check your API key');
