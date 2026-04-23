@@ -1,40 +1,57 @@
 # AE-LINK Flutter SDK
 
-Flutter SDK for deferred deep linking with the AE-LINK platform. Collects device fingerprints, matches them against stored browser fingerprints, and delivers the original link context into the app after installation.
+Flutter SDK for deferred deep linking with the AE-LINK platform. Handles two scenarios:
+
+1. **App installed** → User clicks link → app opens directly with link data
+2. **App not installed** → User clicks link → redirected to store → installs → app opens with original link data (deferred deep linking)
 
 **Backend:** [ae-link-backend](https://github.com/DabhiNavaghan/ae-link-backend)
 **SDK Repo:** [ae-link](https://github.com/DabhiNavaghan/ae-link)
+**Dashboard:** [aelink.vercel.app](https://aelink.vercel.app)
 
-## How It Works
+## Setup
 
-1. User clicks a short link (e.g., `aelink.vercel.app/TG5hid0`) in a browser
-2. The redirect page collects a browser fingerprint and redirects to the app store
-3. User installs the app and opens it
-4. The SDK collects a device fingerprint and calls the backend to find a match
-5. If matched, the SDK returns the original link data (event ID, params, UTMs, etc.)
-6. Your app navigates the user to the right screen
-
-The matching uses IP address (40pts), screen resolution (20pts), timezone (15pts), language (10pts), and time proximity (15pts) — no cookies or advertising IDs required.
-
-## Installation
-
-Add to your `pubspec.yaml`:
+### 1. Add dependency
 
 ```yaml
+# pubspec.yaml
 dependencies:
   ae_link:
     git:
       url: https://github.com/DabhiNavaghan/ae-link.git
 ```
 
-### Platform Setup
+### 2. Register your app in the dashboard
 
-#### Android — `AndroidManifest.xml`
+Go to [aelink.vercel.app/dashboard/apps](https://aelink.vercel.app/dashboard/apps) and add your app with:
 
-Add intent filters for App Links:
+**Android:**
+- Package name: `com.yourcompany.yourapp`
+- SHA-256 fingerprint: (get it with `./gradlew signingReport`)
+- Play Store URL
+
+**iOS:**
+- Bundle ID: `com.yourcompany.yourapp`
+- Team ID: (from [developer.apple.com/account](https://developer.apple.com/account) → Membership)
+- App Store URL
+
+### 3. Android — App Links setup
+
+Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
 
 ```xml
-<activity android:name=".MainActivity" android:exported="true">
+<activity
+    android:name=".MainActivity"
+    android:exported="true"
+    android:launchMode="singleTop">
+
+    <!-- Existing launcher intent filter -->
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+
+    <!-- AE-LINK App Links — opens your app when link is clicked -->
     <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
@@ -44,171 +61,155 @@ Add intent filters for App Links:
 </activity>
 ```
 
-#### iOS — Associated Domains
+Replace `aelink.vercel.app` with your deployment domain if different.
 
-In Xcode, add the Associated Domains capability:
+**How it works:** Android checks `https://aelink.vercel.app/.well-known/assetlinks.json` to verify your app is authorized to handle links from this domain. The backend generates this file automatically from your registered app's package name and SHA-256.
+
+**Get your SHA-256 fingerprint:**
+```bash
+cd android
+./gradlew signingReport
+# Look for "SHA-256" under your signing config
+```
+
+### 4. iOS — Universal Links setup
+
+**Step 1:** In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
 
 ```
 applinks:aelink.vercel.app
 ```
 
-Replace `aelink.vercel.app` with your actual deployment domain.
+**Step 2:** That's it. The backend serves `/.well-known/apple-app-site-association` automatically from your registered app's Team ID and Bundle ID.
 
-## Quick Start
+**How it works:** iOS checks the AASA file on your domain to verify your app is authorized to handle links. The backend generates this from your registered iOS config.
 
-### Initialize
+### 5. Initialize the SDK
+
+Create `lib/services/aelink_service.dart`:
 
 ```dart
 import 'package:ae_link/ae_link.dart';
+import 'package:flutter/material.dart';
+
+late AeLinkService aeLink;
+
+Future<DeepLinkData?> initAeLink({
+  required GlobalKey<NavigatorState> navigatorKey,
+  bool isExistingUser = false,
+}) async {
+  aeLink = AeLinkService(
+    apiKey: 'YOUR_API_KEY',  // From dashboard Settings
+    debug: true,              // false in production
+    isExistingUser: isExistingUser,  // true if user already has the app
+    onDeepLink: (data) {
+      _handleDeepLink(data, navigatorKey);
+    },
+  );
+
+  return await aeLink.initialize();
+}
+
+void _handleDeepLink(DeepLinkData data, GlobalKey<NavigatorState> navKey) {
+  final navigator = navKey.currentState;
+  if (navigator == null) return;
+
+  debugPrint('AE-LINK: eventId=${data.eventId}, action=${data.action}, '
+      'deferred=${data.isDeferred}');
+
+  if (data.eventId != null) {
+    navigator.pushNamed('/event/${data.eventId}');
+  }
+}
+```
+
+Then in `main.dart`:
+
+```dart
+import 'services/aelink_service.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await AeLinkSdk.initialize(
-    AeLinkConfig(
-      apiBaseUrl: 'https://aelink.vercel.app',  // Your backend URL
-      tenantApiKey: 'your-api-key-here',
-      debug: true,  // false in production
-    ),
+  // Pass isExistingUser: true if user is already logged in
+  // (prevents existing users from being counted as new installs)
+  final deferred = await initAeLink(
+    navigatorKey: navigatorKey,
+    isExistingUser: false,  // or: await isUserLoggedIn()
   );
 
-  // Check for deferred deep link on first launch
-  final deferredLink = await AeLinkSdk.checkDeferredLink();
-  if (deferredLink != null) {
-    // User installed the app from a link — navigate to the right screen
-    handleDeepLink(deferredLink);
-  }
-
-  runApp(const MyApp());
+  runApp(MyApp(
+    navigatorKey: navigatorKey,
+    initialDeepLink: deferred,
+  ));
 }
 ```
 
-### Listen for Deep Links
+## What the SDK does on each launch
 
-```dart
-@override
-void initState() {
-  super.initState();
-
-  // Stream of all deep links (deferred + direct app links)
-  AeLinkSdk.onDeepLink.listen((deepLink) {
-    handleDeepLink(deepLink);
-  });
-}
-
-void handleDeepLink(DeepLinkData data) {
-  print('Event ID: ${data.eventId}');
-  print('Action: ${data.action}');
-  print('Is Deferred: ${data.isDeferred}');
-  print('UTM Source: ${data.linkParams?.utmSource}');
-
-  // Navigate based on action
-  if (data.eventId != null) {
-    Navigator.pushNamed(context, '/event/${data.eventId}');
-  }
-
-  // Confirm deferred link was shown (tracks conversion)
-  if (data.isDeferred && data.deferredLinkId != null) {
-    AeLinkSdk.confirmDeepLink(data.deferredLinkId!);
-  }
-}
+**First launch after install:**
+```
+[I] [AE-LINK] Initializing AE-LINK SDK...
+[I] [AE-LINK] Launch: first_install
+[I] [AE-LINK] SDK ready
+[I] [AE-LINK] First launch — checking deferred link...
+[I] [AE-LINK] Deferred link matched: abc123    ← or "No deferred link (organic install)"
 ```
 
-## API Reference
-
-### AeLinkSdk
-
-```dart
-// Initialize (required, call in main() before runApp)
-static Future<void> initialize(AeLinkConfig config)
-
-// Check for deferred link (call on first launch)
-static Future<DeepLinkData?> checkDeferredLink()
-
-// Force check (ignores first-launch check)
-static Future<DeepLinkData?> forceCheckDeferredLink()
-
-// Confirm deferred link was displayed
-static Future<void> confirmDeepLink(String deferredLinkId)
-
-// Process a deep link manually (e.g., from push notification)
-static void processDeepLink(String url)
-
-// Stream of all deep link events
-static Stream<DeepLinkData> get onDeepLink
-
-// Last received deep link
-static DeepLinkData? get lastDeepLink
-
-// Device ID for this device
-static String? getDeviceId()
-
-// Clear all cached SDK data
-static Future<void> clearAll()
-
-// Cleanup
-static Future<void> dispose()
+**App already installed, user clicks a link:**
+```
+[I] [AE-LINK] Initializing AE-LINK SDK...
+[I] [AE-LINK] Launch: return_user
+[I] [AE-LINK] SDK ready
+[I] [AE-LINK] Deep link received: https://aelink.vercel.app/xGJEQJR
 ```
 
-### AeLinkConfig
-
-```dart
-AeLinkConfig(
-  apiBaseUrl: 'https://aelink.vercel.app',  // Required
-  tenantApiKey: 'your-api-key',             // Required
-  debug: false,                              // Enable debug logging
-  requestTimeoutSeconds: 30,                 // API timeout
-  autoHandleDeepLinks: true,                 // Auto-listen for app links
-)
+**Reinstall:**
+```
+[I] [AE-LINK] Launch: reinstall
+[I] [AE-LINK] First launch — checking deferred link...
 ```
 
-### DeepLinkData
+## Available data in DeepLinkData
 
 ```dart
-class DeepLinkData {
-  final String? linkId;
-  final String? deferredLinkId;
-  final String? eventId;
-  final String? action;           // view_event, buy_ticket, etc.
-  final String? destinationUrl;
-  final LinkParams? linkParams;   // UTMs, coupon, referral, custom
-  final bool isDeferred;
-  final DateTime? clickedAt;
-  final String? rawUrl;
+onDeepLink: (data) {
+  data.eventId;          // "12345"
+  data.action;           // "view_event", "buy_ticket"
+  data.destinationUrl;   // "https://allevents.in/event/..."
+  data.isDeferred;       // true if from deferred matching
+  data.deferredLinkId;   // ID for tracking
+  data.linkId;           // Original link ID
+
+  // UTM params
+  data.linkParams?.utmSource;    // "email"
+  data.linkParams?.utmCampaign;  // "summer-promo"
+
+  // Special params
+  data.couponCode;       // "SAVE20"
+  data.referralCode;     // "REF123"
+  data.userEmail;        // "user@example.com"
 }
 ```
-
-### DeviceFingerprint
-
-Collected automatically by the SDK. Matches browser fingerprint format:
-
-| Field | Format | Browser Equivalent |
-|-------|--------|--------------------|
-| Screen width/height | Physical pixels (logical × density) | `window.screen.width/height` |
-| Locale | `en-US` (hyphen separator) | `navigator.language` |
-| Timezone | IANA name (e.g., `Asia/Kolkata`) | `Intl.DateTimeFormat().resolvedOptions().timeZone` |
-| Timezone offset | `+05:30` format | `new Date().getTimezoneOffset()` |
-
-## Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `http` | ^1.3.0 | HTTP client |
-| `shared_preferences` | ^2.5.0 | Local storage |
-| `device_info_plus` | ^11.0.0 | Device info |
-| `package_info_plus` | ^8.0.0 | App version info |
-| `app_links` | ^6.4.0 | Universal/App Links |
-| `connectivity_plus` | ^6.1.0 | Network type |
-| `uuid` | ^4.5.0 | Device ID generation |
-| `logger` | ^2.5.0 | Debug logging |
 
 ## Troubleshooting
 
-**Deep links not opening the app:** Verify your `AndroidManifest.xml` intent filters and iOS Associated Domains match your deployment domain. Test with `adb shell am start -a android.intent.action.VIEW -d "https://aelink.vercel.app/YOUR_SHORT_CODE"`.
+**"App doesn't open when I click the link"**
+- Make sure you registered the app in the dashboard with the correct package name and SHA-256
+- Verify `assetlinks.json` is served: visit `https://aelink.vercel.app/.well-known/assetlinks.json`
+- On Android: run `adb shell pm get-app-links com.yourpackage` to check verification status
+- On iOS: check Associated Domains is enabled in Xcode with `applinks:aelink.vercel.app`
 
-**Deferred links not matching:** Enable `debug: true` and check logs. The match requires 60+ points. Most common issue: user changed networks between clicking and installing (different IP = -40 points). Check `matchScore` and `matchDetails` in the API response.
+**"Deferred link not matching"**
+- Uninstall the app completely before testing (SharedPreferences must be cleared)
+- Click the link in a browser first, then install the app within 72 hours
+- Enable `debug: true` to see matching logs
+- The match requires 60+ points. Same WiFi network = 40 points (IP match)
 
-**SDK not initializing:** Ensure `WidgetsFlutterBinding.ensureInitialized()` is called before `AeLinkSdk.initialize()`.
+**"Launch: first_install but user already had the app"**
+- Set `isExistingUser: true` for logged-in users when adding the SDK to an existing app
 
 ## License
 
