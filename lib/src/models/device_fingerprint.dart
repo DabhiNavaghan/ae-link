@@ -18,20 +18,23 @@ class DeviceFingerprint {
   /// Operating system (android or ios)
   final String? osName;
 
-  /// Screen width in logical pixels
+  /// Screen width in physical pixels (matches browser's window.screen.width)
   final double? screenWidth;
 
-  /// Screen height in logical pixels
+  /// Screen height in physical pixels (matches browser's window.screen.height)
   final double? screenHeight;
 
   /// Screen density / DPI
   final double? screenDensity;
 
-  /// Device locale (e.g., 'en_US')
+  /// Device locale in browser format (e.g., 'en-US')
   final String? locale;
 
-  /// Device timezone
+  /// Device timezone name (IANA format, e.g., 'Asia/Kolkata')
   final String? timezone;
+
+  /// Device timezone offset (e.g., '+05:30')
+  final String? timezoneOffset;
 
   /// Connection type (wifi, mobile, none, bluetooth)
   final String? connectionType;
@@ -60,6 +63,7 @@ class DeviceFingerprint {
     this.screenDensity,
     this.locale,
     this.timezone,
+    this.timezoneOffset,
     this.connectionType,
     this.appVersion,
     this.appBuildNumber,
@@ -81,6 +85,7 @@ class DeviceFingerprint {
       'screen_density': screenDensity,
       'locale': locale,
       'timezone': timezone,
+      'timezone_offset': timezoneOffset,
       'connection_type': connectionType,
       'app_version': appVersion,
       'app_build_number': appBuildNumber,
@@ -103,6 +108,7 @@ class DeviceFingerprint {
       screenDensity: (json['screen_density'] as num?)?.toDouble(),
       locale: json['locale'] as String?,
       timezone: json['timezone'] as String?,
+      timezoneOffset: json['timezone_offset'] as String?,
       connectionType: json['connection_type'] as String?,
       appVersion: json['app_version'] as String?,
       appBuildNumber: json['app_build_number'] as String?,

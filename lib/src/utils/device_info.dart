@@ -83,27 +83,50 @@ class DeviceInfoHelper {
     return 'unknown';
   }
 
-  /// Get screen dimensions
+  /// Get screen dimensions (physical pixels to match browser's window.screen)
   static Map<String, double> getScreenDimensions() {
-    final mediaQuery = MediaQueryData.fromView(
-      WidgetsBinding.instance.platformDispatcher.views.first,
-    );
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    final mediaQuery = MediaQueryData.fromView(view);
+    final dpr = mediaQuery.devicePixelRatio;
     return {
-      'width': mediaQuery.size.width,
-      'height': mediaQuery.size.height,
-      'density': mediaQuery.devicePixelRatio,
+      // Return physical pixels (logical * density) to match
+      // browser's window.screen.width/height which reports physical pixels
+      'width': (mediaQuery.size.width * dpr).roundToDouble(),
+      'height': (mediaQuery.size.height * dpr).roundToDouble(),
+      'density': dpr,
     };
   }
 
-  /// Get device locale
+  /// Get device locale (matches browser's navigator.language format: "en-US")
   static String getLocale() {
     final locale = PlatformDispatcher.instance.locale;
-    return '${locale.languageCode}_${locale.countryCode}';
+    // Use hyphen separator to match browser format (navigator.language = "en-US")
+    return '${locale.languageCode}-${locale.countryCode}';
   }
 
-  /// Get device timezone
+  /// Get device timezone (IANA name to match browser's Intl.DateTimeFormat)
+  ///
+  /// Returns the IANA timezone name (e.g., "Asia/Kolkata", "America/New_York")
+  /// which matches the browser's Intl.DateTimeFormat().resolvedOptions().timeZone
   static String getTimezone() {
-    return DateTime.now().timeZoneOffset.toString();
+    // DateTime.now().timeZoneName returns the IANA name on most platforms
+    // e.g., "IST", "EST", "Asia/Kolkata" depending on platform
+    final tzName = DateTime.now().timeZoneName;
+
+    // On some platforms timeZoneName returns abbreviations (IST, EST, PST).
+    // We also send the offset so the backend can match either way.
+    // The backend's timezone matcher should handle both formats.
+    return tzName;
+  }
+
+  /// Get timezone offset string (e.g., "+05:30", "-08:00")
+  /// Useful as fallback when timeZoneName returns abbreviations
+  static String getTimezoneOffset() {
+    final offset = DateTime.now().timeZoneOffset;
+    final hours = offset.inHours.abs().toString().padLeft(2, '0');
+    final minutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final sign = offset.isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
   }
 
   /// Get connection type

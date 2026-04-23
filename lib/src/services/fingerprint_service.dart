@@ -36,6 +36,7 @@ class FingerprintService {
         screenDensity: screenDimensions['density'],
         locale: DeviceInfoHelper.getLocale(),
         timezone: DeviceInfoHelper.getTimezone(),
+        timezoneOffset: DeviceInfoHelper.getTimezoneOffset(),
         connectionType: await DeviceInfoHelper.getConnectionType(),
         appVersion: await DeviceInfoHelper.getAppVersion(),
         appBuildNumber: await DeviceInfoHelper.getAppBuildNumber(),
