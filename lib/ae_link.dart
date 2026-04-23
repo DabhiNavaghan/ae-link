@@ -10,5 +10,6 @@ export 'src/ae_link_service.dart';
 export 'src/config.dart';
 export 'src/models/deep_link_data.dart';
 export 'src/models/device_fingerprint.dart';
+export 'src/models/device_info_result.dart';
 export 'src/models/link_params.dart';
 export 'src/utils/logger.dart';

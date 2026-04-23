@@ -27,6 +27,9 @@ dependencies:
   # Network connectivity — List<ConnectivityResult> since v5
   connectivity_plus: '>=5.0.0'
 
+  # Battery level and charging state
+  battery_plus: '>=4.0.0'
+
   # UUID generation
   uuid: '>=4.0.0'
 

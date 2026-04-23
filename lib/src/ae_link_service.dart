@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'ae_link_sdk.dart';
 import 'config.dart';
 import 'models/deep_link_data.dart';
+import 'models/device_info_result.dart';
 
 /// Callback type for handling deep links
 typedef DeepLinkCallback = void Function(DeepLinkData data);
@@ -145,6 +146,12 @@ class AeLinkService {
 
   /// Get the device ID assigned by the SDK
   String? get deviceId => AeLinkSdk.getDeviceId();
+
+  /// Collect comprehensive device, app, and environment information.
+  ///
+  /// Returns a [DeviceInfoResult] with platform, OS, screen, locale,
+  /// network, battery, hardware capabilities, and accessibility data.
+  Future<DeviceInfoResult> getDeviceInfo() => AeLinkSdk.getDeviceInfo();
 
   /// Whether the SDK has been initialized
   bool get isInitialized => _initialized;

@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'config.dart';
 import 'models/deep_link_data.dart';
+import 'models/device_info_result.dart';
 import 'services/deep_link_handler.dart';
 import 'services/deferred_link_service.dart';
+import 'services/device_info_service.dart';
 import 'services/fingerprint_service.dart';
 import 'services/storage_service.dart';
 import 'utils/device_info.dart';
@@ -283,6 +285,15 @@ class AeLinkSdk {
   /// Get the device ID for this device
   static String? getDeviceId() {
     return _sdkInstance._storageService.getDeviceId();
+  }
+
+  /// Collect comprehensive device, app, and environment information.
+  ///
+  /// Returns a [DeviceInfoResult] with platform details, OS info, screen
+  /// dimensions, locale, network, battery, accessibility flags, and more.
+  /// All fields are collected in parallel; each group fails gracefully.
+  static Future<DeviceInfoResult> getDeviceInfo() {
+    return DeviceInfoService.getDeviceInfo();
   }
 
   /// Clear all SDK data from storage
