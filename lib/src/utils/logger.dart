@@ -1,15 +1,11 @@
 import 'package:logger/logger.dart';
 
-/// Logger for AE-LINK SDK
+/// Logger for AE-LINK SDK — simple one-line output
 class AeLinkLogger {
   static final Logger _logger = Logger(
-    printer: PrettyPrinter(
-      methodCount: 2,
-      errorMethodCount: 8,
-      lineLength: 120,
+    printer: SimplePrinter(
       colors: true,
-      printEmojis: true,
-      dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
+      printTime: false,
     ),
   );
 
@@ -23,31 +19,25 @@ class AeLinkLogger {
   /// Log a debug message
   static void debug(String message, [dynamic error, StackTrace? stackTrace]) {
     if (_isDebug) {
-      _logger.d(message, error: error, stackTrace: stackTrace);
+      _logger.d('[AE-LINK] $message', error: error, stackTrace: stackTrace);
     }
   }
 
   /// Log an info message
   static void info(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.i(message, error: error, stackTrace: stackTrace);
+    if (_isDebug) {
+      _logger.i('[AE-LINK] $message', error: error, stackTrace: stackTrace);
+    }
   }
 
   /// Log a warning message
-  static void warning(
-    String message, [
-    dynamic error,
-    StackTrace? stackTrace,
-  ]) {
-    _logger.w(message, error: error, stackTrace: stackTrace);
+  static void warning(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.w('[AE-LINK] $message', error: error, stackTrace: stackTrace);
   }
 
   /// Log an error message
-  static void error(
-    String message, [
-    dynamic error,
-    StackTrace? stackTrace,
-  ]) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
+  static void error(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.e('[AE-LINK] $message', error: error, stackTrace: stackTrace);
   }
 
   /// Log an error in a try-catch
@@ -56,6 +46,6 @@ class AeLinkLogger {
     dynamic error,
     StackTrace stackTrace,
   ) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
+    _logger.e('[AE-LINK] $message', error: error, stackTrace: stackTrace);
   }
 }
