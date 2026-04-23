@@ -13,11 +13,12 @@ import 'utils/logger.dart';
 
 /// Main SDK class for AE-LINK deferred deep linking
 ///
-/// This is a singleton that manages device fingerprinting, deferred link matching,
+/// Singleton that manages device fingerprinting, deferred link matching,
 /// and deep link handling.
 class AeLinkSdk {
   static AeLinkSdk? _instance;
   static late AeLinkConfig _config;
+  static bool _validated = false;
 
   late StorageService _storageService;
   late FingerprintService _fingerprintService;
@@ -30,30 +31,31 @@ class AeLinkSdk {
 
   AeLinkSdk._internal();
 
-  /// Get singleton instance
   static AeLinkSdk get _sdkInstance {
     _instance ??= AeLinkSdk._internal();
     return _instance!;
   }
 
-  /// Initialize the SDK with configuration
+  /// Initialize the SDK with configuration.
   ///
-  /// Must be called before any other SDK methods.
   /// This will:
-  /// 1. Initialize services (storage, fingerprint, API)
-  /// 2. Validate API key with the backend
+  /// 1. Validate the API key with the backend (blocks if invalid)
+  /// 2. Check app package/bundle ID against registered apps
   /// 3. Register this install/launch
   /// 4. Setup deep link listening
+  ///
+  /// Throws [AeLinkInitException] if the API key is invalid.
   static Future<void> initialize(AeLinkConfig config) async {
     if (!config.validate()) {
       throw ArgumentError('Invalid AeLinkConfig: tenantApiKey is required');
     }
 
     _config = config;
+    _validated = false;
     final sdk = _sdkInstance;
 
     AeLinkLogger.init(debug: config.debug);
-    AeLinkLogger.info('Initializing AE-LINK SDK');
+    AeLinkLogger.info('Initializing AE-LINK SDK...');
 
     try {
       // Initialize storage
@@ -67,10 +69,26 @@ class AeLinkSdk {
       sdk._deferredLinkService = DeferredLinkService(config: config);
       sdk._deepLinkHandler = DeepLinkHandler();
 
-      // Register this launch with the backend (non-blocking)
-      _registerLaunch();
+      // ── STEP 1: Validate API key + register launch (BLOCKING) ──
+      await _validateAndRegister();
 
-      // Initialize deep link handler if auto handling is enabled
+      if (!_validated) {
+        AeLinkLogger.error(
+          '══════════════════════════════════════════════════════════\n'
+          '  AE-LINK: Invalid API key!\n'
+          '  \n'
+          '  Get your API key from the AE-LINK dashboard:\n'
+          '  ${config.apiBaseUrl}/dashboard/settings\n'
+          '  \n'
+          '  Pass it when creating AeLinkService:\n'
+          '  AeLinkService(apiKey: "YOUR_KEY", ...)\n'
+          '══════════════════════════════════════════════════════════',
+        );
+        // Don't proceed with deep link setup — key is invalid
+        return;
+      }
+
+      // ── STEP 2: Setup deep link handler ──
       if (config.autoHandleDeepLinks) {
         await sdk._deepLinkHandler.initialize();
         sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
@@ -79,35 +97,35 @@ class AeLinkSdk {
         });
       }
 
-      AeLinkLogger.info('SDK initialized');
+      AeLinkLogger.info('SDK ready');
     } catch (e, stackTrace) {
       AeLinkLogger.errorWithStackTrace('SDK init failed', e, stackTrace);
       rethrow;
     }
   }
 
-  /// Register this app launch with the backend.
-  /// Validates API key, checks package name, tracks install type.
-  static Future<void> _registerLaunch() async {
-    try {
-      final sdk = _sdkInstance;
+  /// Validate API key and register this launch with the backend.
+  /// This is BLOCKING — if the key is invalid, we stop everything.
+  static Future<void> _validateAndRegister() async {
+    final sdk = _sdkInstance;
 
-      // Get device ID (create if first time)
+    try {
+      // Collect device info
       var deviceId = sdk._storageService.getDeviceId();
       if (deviceId == null || deviceId.isEmpty) {
         deviceId = await sdk._fingerprintService.getOrCreateDeviceId();
       }
 
       final isFirstLaunch = await sdk._storageService.isFirstLaunch();
-      // Don't mark first launch complete here — let checkDeferredLink handle it
 
       String? packageName;
       String? appVersion;
       String? buildNumber;
       try {
-        packageName = await _getPackageName();
-        appVersion = await DeviceInfoHelper.getAppVersion();
-        buildNumber = await DeviceInfoHelper.getAppBuildNumber();
+        final info = await PackageInfo.fromPlatform();
+        packageName = info.packageName;
+        appVersion = info.version;
+        buildNumber = info.buildNumber;
       } catch (_) {}
 
       final body = jsonEncode({
@@ -135,37 +153,45 @@ class AeLinkSdk {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final result = data['data'];
+        _validated = true;
 
         if (result != null) {
-          // Log install type
           final installType = result['installType'] ?? 'unknown';
-          AeLinkLogger.info('Launch registered: $installType');
+          AeLinkLogger.info('Launch: $installType');
 
-          // Warn if package name doesn't match
           if (result['appValid'] == false && result['appWarning'] != null) {
-            AeLinkLogger.warning(result['appWarning']);
+            AeLinkLogger.warning(
+              'App mismatch: ${result['appWarning']}\n'
+              'Register your app at: ${_config.apiBaseUrl}/dashboard/apps',
+            );
           }
         }
       } else if (response.statusCode == 401) {
-        AeLinkLogger.error('Invalid API key — check your dashboard Settings');
+        _validated = false;
+        // Error message is logged by the caller
+      } else if (response.statusCode == 404) {
+        // Endpoint doesn't exist — old backend version, skip validation
+        _validated = true;
+        AeLinkLogger.debug(
+            'SDK init endpoint not found — update your backend');
       } else {
-        AeLinkLogger.debug('SDK init API returned ${response.statusCode}');
+        // Server error — don't block the SDK, assume valid
+        _validated = true;
+        AeLinkLogger.debug('SDK init returned ${response.statusCode}');
       }
+    } on TimeoutException {
+      // Network timeout — don't block the SDK
+      _validated = true;
+      AeLinkLogger.debug('SDK init timed out — continuing offline');
     } catch (e) {
-      // Non-blocking — SDK should work even if init call fails
-      AeLinkLogger.debug('SDK init API call failed: $e');
+      // Network error — don't block the SDK
+      _validated = true;
+      AeLinkLogger.debug('SDK init failed: $e — continuing offline');
     }
   }
 
-  /// Get app package name / bundle ID
-  static Future<String?> _getPackageName() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return packageInfo.packageName;
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Whether the API key has been validated
+  static bool get isValidated => _validated;
 
   /// Check if SDK has been initialized
   static bool get isInitialized => _instance != null;
@@ -177,14 +203,18 @@ class AeLinkSdk {
   /// Get the last received deep link
   static DeepLinkData? get lastDeepLink => _sdkInstance._lastDeepLink;
 
-  /// Check for deferred deep link on first app launch
+  /// Check for deferred deep link on first app launch.
   ///
   /// Returns the matched deep link data if found, null otherwise.
   static Future<DeepLinkData?> checkDeferredLink() async {
+    if (!_validated) {
+      AeLinkLogger.error('Cannot check deferred link — API key is invalid');
+      return null;
+    }
+
     final sdk = _sdkInstance;
 
     try {
-      // Check if first launch
       final isFirstLaunch = await sdk._storageService.isFirstLaunch();
       if (!isFirstLaunch) {
         AeLinkLogger.debug('Not first launch, skipping deferred check');
@@ -193,10 +223,7 @@ class AeLinkSdk {
 
       AeLinkLogger.info('Checking for deferred deep link...');
 
-      // Collect device fingerprint
       final fingerprint = await sdk._fingerprintService.collectFingerprint();
-
-      // Match fingerprint against deferred links
       final deferredLink =
           await sdk._deferredLinkService.matchFingerprint(fingerprint);
 
@@ -209,35 +236,32 @@ class AeLinkSdk {
         );
         await sdk._storageService.setLastDeferredLinkCheckTime(DateTime.now());
 
-        AeLinkLogger.info(
-            'Deferred link matched: ${deferredLink.deferredLinkId}');
+        AeLinkLogger.info('Deferred link matched: ${deferredLink.deferredLinkId}');
         return deferredLink;
       } else {
         await sdk._storageService.setLastDeferredLinkCheckTime(DateTime.now());
-        AeLinkLogger.info('No deferred link found (organic install)');
+        AeLinkLogger.info('No deferred link (organic install)');
         return null;
       }
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
-          'Error checking deferred link', e, stackTrace);
+      AeLinkLogger.errorWithStackTrace('Deferred check failed', e, stackTrace);
       return null;
     }
   }
 
   /// Confirm that a deferred link was shown to the user
   static Future<void> confirmDeepLink(String deferredLinkId) async {
+    if (!_validated) return;
     try {
       await _sdkInstance._deferredLinkService.confirmDeepLink(deferredLinkId);
       AeLinkLogger.info('Deferred link confirmed');
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
-          'Error confirming deferred link', e, stackTrace);
+      AeLinkLogger.errorWithStackTrace('Confirm failed', e, stackTrace);
     }
   }
 
   /// Manually process a deep link URL
   static void processDeepLink(String url) {
-    AeLinkLogger.info('Processing deep link: $url');
     _sdkInstance._deepLinkHandler.processDeepLink(url);
   }
 
@@ -248,8 +272,8 @@ class AeLinkSdk {
 
   /// Clear all SDK data from storage
   static Future<void> clearAll() async {
-    AeLinkLogger.info('Clearing all AE-LINK SDK data');
     await _sdkInstance._storageService.clearAll();
+    AeLinkLogger.info('SDK data cleared');
   }
 
   /// Dispose the SDK and cleanup resources
@@ -259,13 +283,16 @@ class AeLinkSdk {
     await sdk._deepLinkStreamController.close();
     sdk._deferredLinkService.dispose();
     _instance = null;
-    AeLinkLogger.info('SDK disposed');
   }
 
   /// Force check for deferred deep link (ignores first-launch check)
   static Future<DeepLinkData?> forceCheckDeferredLink() async {
-    final sdk = _sdkInstance;
+    if (!_validated) {
+      AeLinkLogger.error('Cannot check deferred link — API key is invalid');
+      return null;
+    }
 
+    final sdk = _sdkInstance;
     try {
       final fingerprint = await sdk._fingerprintService.collectFingerprint();
       final deferredLink =
@@ -282,8 +309,7 @@ class AeLinkSdk {
 
       return deferredLink;
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
-          'Error force checking deferred link', e, stackTrace);
+      AeLinkLogger.errorWithStackTrace('Force deferred check failed', e, stackTrace);
       return null;
     }
   }
