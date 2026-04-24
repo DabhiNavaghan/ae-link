@@ -13,7 +13,7 @@ import 'services/storage_service.dart';
 import 'utils/device_info.dart';
 import 'utils/logger.dart';
 
-/// Main SDK class for AE-LINK deferred deep linking
+/// Main SDK class for SmartLink deferred deep linking
 ///
 /// Singleton that manages device fingerprinting, deferred link matching,
 /// and deep link handling.
@@ -57,7 +57,7 @@ class AeLinkSdk {
     final sdk = _sdkInstance;
 
     AeLinkLogger.init(debug: config.debug);
-    AeLinkLogger.info('Initializing AE-LINK SDK...');
+    AeLinkLogger.info('Initializing SmartLink SDK...');
 
     try {
       // Initialize storage
@@ -89,9 +89,9 @@ class AeLinkSdk {
       if (!_validated) {
         AeLinkLogger.error(
           '══════════════════════════════════════════════════════════\n'
-          '  AE-LINK: Invalid API key!\n'
+          '  SmartLink: Invalid API key!\n'
           '  \n'
-          '  Get your API key from the AE-LINK dashboard:\n'
+          '  Get your API key from the SmartLink dashboard:\n'
           '  ${config.apiBaseUrl}/dashboard/settings\n'
           '  \n'
           '  Pass it when creating AeLinkService:\n'

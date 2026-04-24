@@ -1,13 +1,13 @@
-/// Default AE-LINK API base URL
+/// Default SmartLink API base URL
 const String kAeLinkDefaultBaseUrl = 'https://aelink.vercel.app';
 
-/// Configuration for the AE-LINK SDK
+/// Configuration for the SmartLink SDK
 class AeLinkConfig {
-  /// The base URL of the AE-LINK API
+  /// The base URL of the SmartLink API
   /// Defaults to 'https://aelink.vercel.app'
   final String apiBaseUrl;
 
-  /// The API key for authentication with the AE-LINK backend
+  /// The API key for authentication with the SmartLink backend
   final String tenantApiKey;
 
   /// Enable debug logging
@@ -19,7 +19,7 @@ class AeLinkConfig {
   /// Whether to automatically handle incoming deep links
   final bool autoHandleDeepLinks;
 
-  /// Set to true if you're adding AE-LINK SDK to an existing app
+  /// Set to true if you're adding SmartLink SDK to an existing app
   /// that already has users. This tells the SDK to skip deferred link
   /// checking for existing users and correctly reports them as
   /// 'return_user' instead of 'first_install'.

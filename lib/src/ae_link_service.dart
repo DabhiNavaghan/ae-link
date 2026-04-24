@@ -11,7 +11,7 @@ typedef DeepLinkCallback = void Function(DeepLinkData data);
 /// Callback type for handling errors
 typedef ErrorCallback = void Function(String message, dynamic error);
 
-/// AeLinkService — single entry point for all AE-LINK functionality.
+/// AeLinkService — single entry point for all SmartLink functionality.
 ///
 /// Handles SDK initialization, deferred deep link checking, deep link
 /// listening, and cleanup. Use this instead of calling AeLinkSdk directly.
@@ -30,7 +30,7 @@ class AeLinkService {
   /// Backend API base URL (defaults to https://aelink.vercel.app)
   final String apiBaseUrl;
 
-  /// Tenant API key from the AE-LINK dashboard
+  /// Tenant API key from the SmartLink dashboard
   final String apiKey;
 
   /// Called when a deep link is received (both deferred and direct)
@@ -48,7 +48,7 @@ class AeLinkService {
   /// Auto-listen for Universal Links / App Links
   final bool autoHandleDeepLinks;
 
-  /// Set to true when adding AE-LINK to an app that already has users.
+  /// Set to true when adding SmartLink to an app that already has users.
   /// This prevents existing users from being treated as new installs
   /// and skips deferred link checking for them.
   ///
@@ -81,7 +81,7 @@ class AeLinkService {
   /// Call this once in your main() before runApp(), or in your app's
   /// initial state. This does everything:
   ///
-  /// 1. Initializes the AE-LINK SDK
+  /// 1. Initializes the SmartLink SDK
   /// 2. Checks for deferred deep links (first launch after install)
   /// 3. Starts listening for incoming app links
   ///
@@ -124,7 +124,7 @@ class AeLinkService {
 
       return deferredLink;
     } catch (e) {
-      onError?.call('AE-LINK initialization failed', e);
+      onError?.call('SmartLink initialization failed', e);
       return null;
     }
   }

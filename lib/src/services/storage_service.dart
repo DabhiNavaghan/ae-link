@@ -2,11 +2,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service for managing local storage using SharedPreferences
 class StorageService {
-  static const String _keyFirstLaunch = 'ae_link_first_launch';
-  static const String _keyDeviceId = 'ae_link_device_id';
-  static const String _keyLastDeferredLinkCheck = 'ae_link_last_deferred_link_check';
-  static const String _keyLastDeferredLink = 'ae_link_last_deferred_link';
-  static const String _keyLastDeepLink = 'ae_link_last_deep_link';
+  static const String _keyFirstLaunch = 'smartlink_first_launch';
+  static const String _keyDeviceId = 'smartlink_device_id';
+  static const String _keyLastDeferredLinkCheck = 'smartlink_last_deferred_link_check';
+  static const String _keyLastDeferredLink = 'smartlink_last_deferred_link';
+  static const String _keyLastDeepLink = 'smartlink_last_deep_link';
 
   late SharedPreferences _prefs;
 

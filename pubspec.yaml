@@ -1,5 +1,5 @@
-name: ae_link
-description: Flutter SDK for integrating with the AE-LINK deferred deep linking platform. Enables collection of device fingerprints, matching with stored deep links, and handling of deferred deep links.
+name: smartlink
+description: Flutter SDK for SmartLink — deep linking platform with deferred deep linking, device fingerprinting, and seamless app attribution.
 version: 1.0.0
 publish_to: none
 
