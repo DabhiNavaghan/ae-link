@@ -29,6 +29,15 @@ class DeepLinkData {
   /// Raw deep link URL
   final String? rawUrl;
 
+  /// Campaign ID this link belongs to
+  final String? campaignId;
+
+  /// Campaign name
+  final String? campaignName;
+
+  /// Link type (event, ticket, profile, category, custom)
+  final String? linkType;
+
   DeepLinkData({
     this.linkId,
     this.deferredLinkId,
@@ -39,6 +48,9 @@ class DeepLinkData {
     this.isDeferred = false,
     this.clickedAt,
     this.rawUrl,
+    this.campaignId,
+    this.campaignName,
+    this.linkType,
   });
 
   /// Get UTM parameters as a map
@@ -70,6 +82,9 @@ class DeepLinkData {
       'is_deferred': isDeferred,
       'clicked_at': clickedAt?.toIso8601String(),
       'raw_url': rawUrl,
+      'campaign_id': campaignId,
+      'campaign_name': campaignName,
+      'link_type': linkType,
       if (linkParams != null) 'link_params': linkParams!.toJson(),
     };
   }
@@ -90,6 +105,9 @@ class DeepLinkData {
           ? DateTime.parse(json['clicked_at'] as String)
           : null,
       rawUrl: json['raw_url'] as String?,
+      campaignId: json['campaign_id'] as String?,
+      campaignName: json['campaign_name'] as String?,
+      linkType: json['link_type'] as String?,
     );
   }
 
@@ -119,6 +137,14 @@ class DeepLinkData {
   }
 
   @override
-  String toString() =>
-      'DeepLinkData(eventId: $eventId, action: $action, isDeferred: $isDeferred, deferredLinkId: $deferredLinkId)';
+  String toString() {
+    final parts = <String>[];
+    if (eventId != null) parts.add('event=$eventId');
+    if (action != null) parts.add('action=$action');
+    if (campaignName != null) parts.add('campaign=$campaignName');
+    if (linkType != null) parts.add('type=$linkType');
+    if (isDeferred) parts.add('deferred');
+    if (destinationUrl != null) parts.add('dest=$destinationUrl');
+    return 'DeepLinkData(${parts.join(', ')})';
+  }
 }

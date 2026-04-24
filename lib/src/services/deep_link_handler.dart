@@ -140,6 +140,9 @@ class DeepLinkHandler {
             eventId: params['eventId']?.toString(),
             action: params['action']?.toString(),
             destinationUrl: data['destinationUrl']?.toString(),
+            campaignId: data['campaignId']?.toString(),
+            campaignName: data['campaignName']?.toString(),
+            linkType: data['linkType']?.toString(),
             linkParams: LinkParams(
               utmSource: params['utmSource']?.toString(),
               utmMedium: params['utmMedium']?.toString(),
