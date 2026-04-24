@@ -144,6 +144,9 @@ class DeepLinkHandler {
             destinationUrl: data['destinationUrl']?.toString(),
             campaignId: data['campaignId']?.toString(),
             campaignName: data['campaignName']?.toString(),
+            campaign: data['campaign'] != null
+                ? Map<String, dynamic>.from(data['campaign'])
+                : null,
             linkType: data['linkType']?.toString(),
             linkParams: LinkParams(
               utmSource: params['utmSource']?.toString(),
@@ -236,6 +239,7 @@ class DeepLinkHandler {
       destinationUrl: data.destinationUrl,
       campaignId: data.campaignId,
       campaignName: data.campaignName,
+      campaign: data.campaign,
       linkType: data.linkType,
       linkParams: LinkParams(
         utmSource: pick(data.linkParams?.utmSource, ['utm_source', 'utmSource']),

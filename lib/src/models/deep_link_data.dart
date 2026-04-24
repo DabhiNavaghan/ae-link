@@ -35,6 +35,9 @@ class DeepLinkData {
   /// Campaign name
   final String? campaignName;
 
+  /// Full campaign data (name, slug, description, dates, metadata)
+  final Map<String, dynamic>? campaign;
+
   /// Link type (event, ticket, profile, category, custom)
   final String? linkType;
 
@@ -50,6 +53,7 @@ class DeepLinkData {
     this.rawUrl,
     this.campaignId,
     this.campaignName,
+    this.campaign,
     this.linkType,
   });
 
@@ -84,6 +88,7 @@ class DeepLinkData {
       'raw_url': rawUrl,
       'campaign_id': campaignId,
       'campaign_name': campaignName,
+      if (campaign != null) 'campaign': campaign,
       'link_type': linkType,
       if (linkParams != null) 'link_params': linkParams!.toJson(),
     };
@@ -107,6 +112,7 @@ class DeepLinkData {
       rawUrl: json['raw_url'] as String?,
       campaignId: json['campaign_id'] as String?,
       campaignName: json['campaign_name'] as String?,
+      campaign: json['campaign'] as Map<String, dynamic>?,
       linkType: json['link_type'] as String?,
     );
   }
