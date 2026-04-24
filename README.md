@@ -1,13 +1,13 @@
-# AE-LINK Flutter SDK
+# SmartLink Flutter SDK
 
-Flutter SDK for deferred deep linking with the AE-LINK platform. Handles two scenarios:
+Flutter SDK for deferred deep linking with the SmartLink platform. Handles two scenarios:
 
 1. **App installed** → User clicks link → app opens directly with link data
 2. **App not installed** → User clicks link → redirected to store → installs → app opens with original link data (deferred deep linking)
 
-**Backend:** [ae-link-backend](https://github.com/DabhiNavaghan/ae-link-backend)
-**SDK Repo:** [ae-link](https://github.com/DabhiNavaghan/ae-link)
-**Dashboard:** [aelink.vercel.app](https://aelink.vercel.app)
+**Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/smartlink-backend)
+**SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/smartlink)
+**Dashboard:** [smartlink.vercel.app](https://smartlink.vercel.app)
 
 ## Setup
 
@@ -16,14 +16,14 @@ Flutter SDK for deferred deep linking with the AE-LINK platform. Handles two sce
 ```yaml
 # pubspec.yaml
 dependencies:
-  ae_link:
+  smartlink:
     git:
-      url: https://github.com/DabhiNavaghan/ae-link.git
+      url: https://github.com/DabhiNavaghan/smartlink.git
 ```
 
 ### 2. Register your app in the dashboard
 
-Go to [aelink.vercel.app/dashboard/apps](https://aelink.vercel.app/dashboard/apps) and add your app with:
+Go to [smartlink.vercel.app/dashboard/apps](https://smartlink.vercel.app/dashboard/apps) and add your app with:
 
 **Android:**
 - Package name: `com.yourcompany.yourapp`
@@ -51,19 +51,19 @@ Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
         <category android:name="android.intent.category.LAUNCHER" />
     </intent-filter>
 
-    <!-- AE-LINK App Links — opens your app when link is clicked -->
+    <!-- SmartLink App Links — opens your app when link is clicked -->
     <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="https" android:host="aelink.vercel.app" />
+        <data android:scheme="https" android:host="smartlink.vercel.app" />
     </intent-filter>
 </activity>
 ```
 
-Replace `aelink.vercel.app` with your deployment domain if different.
+Replace `smartlink.vercel.app` with your deployment domain if different.
 
-**How it works:** Android checks `https://aelink.vercel.app/.well-known/assetlinks.json` to verify your app is authorized to handle links from this domain. The backend generates this file automatically from your registered app's package name and SHA-256.
+**How it works:** Android checks `https://smartlink.vercel.app/.well-known/assetlinks.json` to verify your app is authorized to handle links from this domain. The backend generates this file automatically from your registered app's package name and SHA-256.
 
 **Get your SHA-256 fingerprint:**
 ```bash
@@ -77,7 +77,7 @@ cd android
 **Step 1:** In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
 
 ```
-applinks:aelink.vercel.app
+applinks:smartlink.vercel.app
 ```
 
 **Step 2:** That's it. The backend serves `/.well-known/apple-app-site-association` automatically from your registered app's Team ID and Bundle ID.
@@ -89,7 +89,7 @@ applinks:aelink.vercel.app
 Create `lib/services/aelink_service.dart`:
 
 ```dart
-import 'package:ae_link/ae_link.dart';
+import 'package:smartlink/smartlink.dart';
 import 'package:flutter/material.dart';
 
 late AeLinkService aeLink;
@@ -114,7 +114,7 @@ void _handleDeepLink(DeepLinkData data, GlobalKey<NavigatorState> navKey) {
   final navigator = navKey.currentState;
   if (navigator == null) return;
 
-  debugPrint('AE-LINK: eventId=${data.eventId}, action=${data.action}, '
+  debugPrint('SmartLink: eventId=${data.eventId}, action=${data.action}, '
       'deferred=${data.isDeferred}');
 
   if (data.eventId != null) {
@@ -151,25 +151,25 @@ void main() async {
 
 **First launch after install:**
 ```
-[I] [AE-LINK] Initializing AE-LINK SDK...
-[I] [AE-LINK] Launch: first_install
-[I] [AE-LINK] SDK ready
-[I] [AE-LINK] First launch — checking deferred link...
-[I] [AE-LINK] Deferred link matched: abc123    ← or "No deferred link (organic install)"
+[I] [SmartLink] Initializing SmartLink SDK...
+[I] [SmartLink] Launch: first_install
+[I] [SmartLink] SDK ready
+[I] [SmartLink] First launch — checking deferred link...
+[I] [SmartLink] Deferred link matched: abc123    ← or "No deferred link (organic install)"
 ```
 
 **App already installed, user clicks a link:**
 ```
-[I] [AE-LINK] Initializing AE-LINK SDK...
-[I] [AE-LINK] Launch: return_user
-[I] [AE-LINK] SDK ready
-[I] [AE-LINK] Deep link received: https://aelink.vercel.app/xGJEQJR
+[I] [SmartLink] Initializing SmartLink SDK...
+[I] [SmartLink] Launch: return_user
+[I] [SmartLink] SDK ready
+[I] [SmartLink] Deep link received: https://smartlink.vercel.app/xGJEQJR
 ```
 
 **Reinstall:**
 ```
-[I] [AE-LINK] Launch: reinstall
-[I] [AE-LINK] First launch — checking deferred link...
+[I] [SmartLink] Launch: reinstall
+[I] [SmartLink] First launch — checking deferred link...
 ```
 
 ## Available data in DeepLinkData
@@ -198,9 +198,9 @@ onDeepLink: (data) {
 
 **"App doesn't open when I click the link"**
 - Make sure you registered the app in the dashboard with the correct package name and SHA-256
-- Verify `assetlinks.json` is served: visit `https://aelink.vercel.app/.well-known/assetlinks.json`
+- Verify `assetlinks.json` is served: visit `https://smartlink.vercel.app/.well-known/assetlinks.json`
 - On Android: run `adb shell pm get-app-links com.yourpackage` to check verification status
-- On iOS: check Associated Domains is enabled in Xcode with `applinks:aelink.vercel.app`
+- On iOS: check Associated Domains is enabled in Xcode with `applinks:smartlink.vercel.app`
 
 **"Deferred link not matching"**
 - Uninstall the app completely before testing (SharedPreferences must be cleared)
