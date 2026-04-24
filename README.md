@@ -5,8 +5,8 @@ Flutter SDK for deferred deep linking with the SmartLink platform. Handles two s
 1. **App installed** → User clicks link → app opens directly with link data
 2. **App not installed** → User clicks link → redirected to store → installs → app opens with original link data (deferred deep linking)
 
-**Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/smartlink-backend)
-**SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/smartlink)
+**Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/ae-link-backend)
+**SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/ae-link)
 **Dashboard:** [smartlink.vercel.app](https://smartlink.vercel.app)
 
 ## Setup
@@ -18,7 +18,7 @@ Flutter SDK for deferred deep linking with the SmartLink platform. Handles two s
 dependencies:
   smartlink:
     git:
-      url: https://github.com/DabhiNavaghan/smartlink.git
+      url: https://github.com/DabhiNavaghan/ae-link.git
 ```
 
 ### 2. Register your app in the dashboard
@@ -92,13 +92,13 @@ Create `lib/services/aelink_service.dart`:
 import 'package:smartlink/smartlink.dart';
 import 'package:flutter/material.dart';
 
-late AeLinkService aeLink;
+late SmartLinkService smartLink;
 
-Future<DeepLinkData?> initAeLink({
+Future<DeepLinkData?> initSmartLink({
   required GlobalKey<NavigatorState> navigatorKey,
   bool isExistingUser = false,
 }) async {
-  aeLink = AeLinkService(
+  smartLink = SmartLinkService(
     apiKey: 'YOUR_API_KEY',  // From dashboard Settings
     debug: true,              // false in production
     isExistingUser: isExistingUser,  // true if user already has the app
@@ -107,7 +107,7 @@ Future<DeepLinkData?> initAeLink({
     },
   );
 
-  return await aeLink.initialize();
+  return await smartLink.initialize();
 }
 
 void _handleDeepLink(DeepLinkData data, GlobalKey<NavigatorState> navKey) {
@@ -135,7 +135,7 @@ void main() async {
 
   // Pass isExistingUser: true if user is already logged in
   // (prevents existing users from being counted as new installs)
-  final deferred = await initAeLink(
+  final deferred = await initSmartLink(
     navigatorKey: navigatorKey,
     isExistingUser: false,  // or: await isUserLoggedIn()
   );

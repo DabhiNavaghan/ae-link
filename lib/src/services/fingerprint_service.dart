@@ -13,7 +13,7 @@ class FingerprintService {
 
   /// Collect device fingerprint
   Future<DeviceFingerprint> collectFingerprint() async {
-    AeLinkLogger.debug('Collecting fingerprint...');
+    SmartLinkLogger.debug('Collecting fingerprint...');
 
     try {
       // Get or create device ID
@@ -43,10 +43,10 @@ class FingerprintService {
         collectedAt: DateTime.now(),
       );
 
-      AeLinkLogger.debug('Device fingerprint collected: $fingerprint');
+      SmartLinkLogger.debug('Device fingerprint collected: $fingerprint');
       return fingerprint;
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
+      SmartLinkLogger.errorWithStackTrace(
         'Error collecting device fingerprint',
         e,
         stackTrace,

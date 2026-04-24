@@ -82,7 +82,7 @@ class StorageService {
     await _prefs.setString(_keyLastDeepLink, linkDataJson);
   }
 
-  /// Clear all AE-LINK data
+  /// Clear all SmartLink data
   Future<void> clearAll() async {
     await _prefs.remove(_keyFirstLaunch);
     await _prefs.remove(_keyDeviceId);

@@ -1,7 +1,7 @@
 import 'package:logger/logger.dart';
 
 /// Logger for SmartLink SDK — simple one-line output
-class AeLinkLogger {
+class SmartLinkLogger {
   static final Logger _logger = Logger(
     printer: SimplePrinter(
       colors: true,

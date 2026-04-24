@@ -8,7 +8,7 @@ import '../utils/logger.dart';
 
 /// Service for API calls related to deferred deep linking
 class DeferredLinkService {
-  final AeLinkConfig config;
+  final SmartLinkConfig config;
   late http.Client _httpClient;
 
   DeferredLinkService({required this.config}) {
@@ -55,16 +55,16 @@ class DeferredLinkService {
           return _parseDeepLinkResponse(data);
         }
       } else if (response.statusCode == 401) {
-        AeLinkLogger.warning('Unauthorized — check your API key');
+        SmartLinkLogger.warning('Unauthorized — check your API key');
         return null;
       } else {
-        AeLinkLogger.warning(
+        SmartLinkLogger.warning(
           'Failed to match fingerprint: ${response.statusCode} ${response.body}',
         );
         return null;
       }
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('Error matching fingerprint', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('Error matching fingerprint', e, stackTrace);
       return null;
     }
     return null;
@@ -73,7 +73,7 @@ class DeferredLinkService {
   /// Confirm that a deferred link was shown to the user
   Future<bool> confirmDeepLink(String deferredLinkId) async {
     try {
-      AeLinkLogger.info('Confirming deferred link: $deferredLinkId');
+      SmartLinkLogger.info('Confirming deferred link: $deferredLinkId');
 
       final url = Uri.parse('${config.apiBaseUrl}/api/v1/deferred/confirm');
       final body = jsonEncode({
@@ -81,7 +81,7 @@ class DeferredLinkService {
         'deviceId': config.tenantApiKey.hashCode.toString(),
       });
 
-      AeLinkLogger.debug('POST ${url.toString()}');
+      SmartLinkLogger.debug('POST ${url.toString()}');
 
       final response = await _httpClient
           .post(
@@ -98,23 +98,23 @@ class DeferredLinkService {
             },
           );
 
-      AeLinkLogger.debug('Response status: ${response.statusCode}');
+      SmartLinkLogger.debug('Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
         final success = jsonResponse['success'] as bool? ?? false;
         if (success) {
-          AeLinkLogger.info('Deferred link confirmed successfully');
+          SmartLinkLogger.info('Deferred link confirmed successfully');
         }
         return success;
       } else {
-        AeLinkLogger.warning(
+        SmartLinkLogger.warning(
           'Failed to confirm deferred link: ${response.statusCode}',
         );
         return false;
       }
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('Error confirming deferred link', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('Error confirming deferred link', e, stackTrace);
       return false;
     }
   }

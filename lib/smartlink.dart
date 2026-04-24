@@ -5,8 +5,8 @@
 
 library smartlink;
 
-export 'src/ae_link_sdk.dart';
-export 'src/ae_link_service.dart';
+export 'src/smartlink_sdk.dart';
+export 'src/smartlink_service.dart';
 export 'src/config.dart';
 export 'src/models/deep_link_data.dart';
 export 'src/models/device_fingerprint.dart';

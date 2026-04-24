@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'ae_link_sdk.dart';
+import 'smartlink_sdk.dart';
 import 'config.dart';
 import 'models/deep_link_data.dart';
 import 'models/device_info_result.dart';
@@ -11,14 +11,14 @@ typedef DeepLinkCallback = void Function(DeepLinkData data);
 /// Callback type for handling errors
 typedef ErrorCallback = void Function(String message, dynamic error);
 
-/// AeLinkService — single entry point for all SmartLink functionality.
+/// SmartLinkService — single entry point for all SmartLink functionality.
 ///
 /// Handles SDK initialization, deferred deep link checking, deep link
-/// listening, and cleanup. Use this instead of calling AeLinkSdk directly.
+/// listening, and cleanup. Use this instead of calling SmartLinkSdk directly.
 ///
 /// Usage in main.dart:
 /// ```dart
-/// final aeLink = AeLinkService(
+/// final aeLink = SmartLinkService(
 ///   apiKey: 'your-api-key',
 ///   onDeepLink: (data) {
 ///     // Navigate based on data.eventId, data.action, etc.
@@ -26,8 +26,8 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// );
 /// await aeLink.initialize();
 /// ```
-class AeLinkService {
-  /// Backend API base URL (defaults to https://aelink.vercel.app)
+class SmartLinkService {
+  /// Backend API base URL (defaults to https://smartlink.vercel.app)
   final String apiBaseUrl;
 
   /// Tenant API key from the SmartLink dashboard
@@ -54,7 +54,7 @@ class AeLinkService {
   ///
   /// Example: set based on whether the user is logged in:
   /// ```dart
-  /// AeLinkService(
+  /// SmartLinkService(
   ///   apiKey: 'KEY',
   ///   isExistingUser: authService.isLoggedIn,
   ///   onDeepLink: (data) { ... },
@@ -65,8 +65,8 @@ class AeLinkService {
   StreamSubscription<DeepLinkData>? _deepLinkSubscription;
   bool _initialized = false;
 
-  AeLinkService({
-    this.apiBaseUrl = kAeLinkDefaultBaseUrl,
+  SmartLinkService({
+    this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.apiKey,
     required this.onDeepLink,
     this.onError,
@@ -91,8 +91,8 @@ class AeLinkService {
 
     try {
       // 1. Initialize SDK
-      await AeLinkSdk.initialize(
-        AeLinkConfig(
+      await SmartLinkSdk.initialize(
+        SmartLinkConfig(
           apiBaseUrl: apiBaseUrl,
           tenantApiKey: apiKey,
           debug: debug,
@@ -103,13 +103,13 @@ class AeLinkService {
       );
 
       // 2. Listen for deep links (deferred + direct)
-      _deepLinkSubscription = AeLinkSdk.onDeepLink.listen(
+      _deepLinkSubscription = SmartLinkSdk.onDeepLink.listen(
         (data) {
           onDeepLink(data);
 
           // Auto-confirm deferred links
           if (data.isDeferred && data.deferredLinkId != null) {
-            AeLinkSdk.confirmDeepLink(data.deferredLinkId!);
+            SmartLinkSdk.confirmDeepLink(data.deferredLinkId!);
           }
         },
         onError: (error) {
@@ -118,7 +118,7 @@ class AeLinkService {
       );
 
       // 3. Check for deferred deep link on first launch
-      final deferredLink = await AeLinkSdk.checkDeferredLink();
+      final deferredLink = await SmartLinkSdk.checkDeferredLink();
 
       _initialized = true;
 
@@ -131,13 +131,13 @@ class AeLinkService {
 
   /// Manually process a deep link URL (e.g., from a push notification)
   void handleUrl(String url) {
-    AeLinkSdk.processDeepLink(url);
+    SmartLinkSdk.processDeepLink(url);
   }
 
   /// Force check for deferred deep link (ignores first-launch check)
   Future<DeepLinkData?> forceCheckDeferred() async {
     try {
-      return await AeLinkSdk.forceCheckDeferredLink();
+      return await SmartLinkSdk.forceCheckDeferredLink();
     } catch (e) {
       onError?.call('Force deferred check failed', e);
       return null;
@@ -145,24 +145,24 @@ class AeLinkService {
   }
 
   /// Get the device ID assigned by the SDK
-  String? get deviceId => AeLinkSdk.getDeviceId();
+  String? get deviceId => SmartLinkSdk.getDeviceId();
 
   /// Collect comprehensive device, app, and environment information.
   ///
   /// Returns a [DeviceInfoResult] with platform, OS, screen, locale,
   /// network, battery, hardware capabilities, and accessibility data.
-  Future<DeviceInfoResult> getDeviceInfo() => AeLinkSdk.getDeviceInfo();
+  Future<DeviceInfoResult> getDeviceInfo() => SmartLinkSdk.getDeviceInfo();
 
   /// Whether the SDK has been initialized
   bool get isInitialized => _initialized;
 
   /// Get the last received deep link
-  DeepLinkData? get lastDeepLink => AeLinkSdk.lastDeepLink;
+  DeepLinkData? get lastDeepLink => SmartLinkSdk.lastDeepLink;
 
   /// Cleanup — call in your app's dispose
   Future<void> dispose() async {
     await _deepLinkSubscription?.cancel();
-    await AeLinkSdk.dispose();
+    await SmartLinkSdk.dispose();
     _initialized = false;
   }
 }

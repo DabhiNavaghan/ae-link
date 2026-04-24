@@ -17,9 +17,9 @@ import 'utils/logger.dart';
 ///
 /// Singleton that manages device fingerprinting, deferred link matching,
 /// and deep link handling.
-class AeLinkSdk {
-  static AeLinkSdk? _instance;
-  static late AeLinkConfig _config;
+class SmartLinkSdk {
+  static SmartLinkSdk? _instance;
+  static late SmartLinkConfig _config;
   static bool _validated = false;
 
   late StorageService _storageService;
@@ -31,10 +31,10 @@ class AeLinkSdk {
   final StreamController<DeepLinkData> _deepLinkStreamController =
       StreamController<DeepLinkData>.broadcast();
 
-  AeLinkSdk._internal();
+  SmartLinkSdk._internal();
 
-  static AeLinkSdk get _sdkInstance {
-    _instance ??= AeLinkSdk._internal();
+  static SmartLinkSdk get _sdkInstance {
+    _instance ??= SmartLinkSdk._internal();
     return _instance!;
   }
 
@@ -46,18 +46,18 @@ class AeLinkSdk {
   /// 3. Register this install/launch
   /// 4. Setup deep link listening
   ///
-  /// Throws [AeLinkInitException] if the API key is invalid.
-  static Future<void> initialize(AeLinkConfig config) async {
+  /// Throws [SmartLinkInitException] if the API key is invalid.
+  static Future<void> initialize(SmartLinkConfig config) async {
     if (!config.validate()) {
-      throw ArgumentError('Invalid AeLinkConfig: tenantApiKey is required');
+      throw ArgumentError('Invalid SmartLinkConfig: tenantApiKey is required');
     }
 
     _config = config;
     _validated = false;
     final sdk = _sdkInstance;
 
-    AeLinkLogger.init(debug: config.debug);
-    AeLinkLogger.info('Initializing SmartLink SDK...');
+    SmartLinkLogger.init(debug: config.debug);
+    SmartLinkLogger.info('Initializing SmartLink SDK...');
 
     try {
       // Initialize storage
@@ -79,7 +79,7 @@ class AeLinkSdk {
         final alreadyMarked = prefs.getDeviceId() != null;
         if (!alreadyMarked) {
           await prefs.markFirstLaunchComplete();
-          AeLinkLogger.info('Existing user — will skip deferred link check');
+          SmartLinkLogger.info('Existing user — will skip deferred link check');
         }
       }
 
@@ -87,15 +87,15 @@ class AeLinkSdk {
       await _validateAndRegister();
 
       if (!_validated) {
-        AeLinkLogger.error(
+        SmartLinkLogger.error(
           '══════════════════════════════════════════════════════════\n'
           '  SmartLink: Invalid API key!\n'
           '  \n'
           '  Get your API key from the SmartLink dashboard:\n'
           '  ${config.apiBaseUrl}/dashboard/settings\n'
           '  \n'
-          '  Pass it when creating AeLinkService:\n'
-          '  AeLinkService(apiKey: "YOUR_KEY", ...)\n'
+          '  Pass it when creating SmartLinkService:\n'
+          '  SmartLinkService(apiKey: "YOUR_KEY", ...)\n'
           '══════════════════════════════════════════════════════════',
         );
         // Don't proceed with deep link setup — key is invalid
@@ -111,9 +111,9 @@ class AeLinkSdk {
         });
       }
 
-      AeLinkLogger.info('SDK ready');
+      SmartLinkLogger.info('SDK ready');
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('SDK init failed', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('SDK init failed', e, stackTrace);
       rethrow;
     }
   }
@@ -172,10 +172,10 @@ class AeLinkSdk {
 
         if (result != null) {
           final installType = result['installType'] ?? 'unknown';
-          AeLinkLogger.info('Launch: $installType');
+          SmartLinkLogger.info('Launch: $installType');
 
           if (result['appValid'] == false && result['appWarning'] != null) {
-            AeLinkLogger.warning(
+            SmartLinkLogger.warning(
               'App mismatch: ${result['appWarning']}\n'
               'Register your app at: ${_config.apiBaseUrl}/dashboard/apps',
             );
@@ -187,21 +187,21 @@ class AeLinkSdk {
       } else if (response.statusCode == 404) {
         // Endpoint doesn't exist — old backend version, skip validation
         _validated = true;
-        AeLinkLogger.debug(
+        SmartLinkLogger.debug(
             'SDK init endpoint not found — update your backend');
       } else {
         // Server error — don't block the SDK, assume valid
         _validated = true;
-        AeLinkLogger.debug('SDK init returned ${response.statusCode}');
+        SmartLinkLogger.debug('SDK init returned ${response.statusCode}');
       }
     } on TimeoutException {
       // Network timeout — don't block the SDK
       _validated = true;
-      AeLinkLogger.debug('SDK init timed out — continuing offline');
+      SmartLinkLogger.debug('SDK init timed out — continuing offline');
     } catch (e) {
       // Network error — don't block the SDK
       _validated = true;
-      AeLinkLogger.debug('SDK init failed: $e — continuing offline');
+      SmartLinkLogger.debug('SDK init failed: $e — continuing offline');
     }
   }
 
@@ -223,7 +223,7 @@ class AeLinkSdk {
   /// Returns the matched deep link data if found, null otherwise.
   static Future<DeepLinkData?> checkDeferredLink() async {
     if (!_validated) {
-      AeLinkLogger.error('Cannot check deferred link — API key is invalid');
+      SmartLinkLogger.error('Cannot check deferred link — API key is invalid');
       return null;
     }
 
@@ -235,7 +235,7 @@ class AeLinkSdk {
         return null;
       }
 
-      AeLinkLogger.info('First launch — checking deferred link...');
+      SmartLinkLogger.info('First launch — checking deferred link...');
 
       final fingerprint = await sdk._fingerprintService.collectFingerprint();
       final deferredLink =
@@ -253,15 +253,15 @@ class AeLinkSdk {
         );
         await sdk._storageService.setLastDeferredLinkCheckTime(DateTime.now());
 
-        AeLinkLogger.info('Deferred link matched: ${deferredLink.deferredLinkId}');
+        SmartLinkLogger.info('Deferred link matched: ${deferredLink.deferredLinkId}');
         return deferredLink;
       } else {
         await sdk._storageService.setLastDeferredLinkCheckTime(DateTime.now());
-        AeLinkLogger.info('No deferred link (organic install)');
+        SmartLinkLogger.info('No deferred link (organic install)');
         return null;
       }
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('Deferred check failed', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('Deferred check failed', e, stackTrace);
       return null;
     }
   }
@@ -271,9 +271,9 @@ class AeLinkSdk {
     if (!_validated) return;
     try {
       await _sdkInstance._deferredLinkService.confirmDeepLink(deferredLinkId);
-      AeLinkLogger.info('Deferred link confirmed');
+      SmartLinkLogger.info('Deferred link confirmed');
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('Confirm failed', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('Confirm failed', e, stackTrace);
     }
   }
 
@@ -299,7 +299,7 @@ class AeLinkSdk {
   /// Clear all SDK data from storage
   static Future<void> clearAll() async {
     await _sdkInstance._storageService.clearAll();
-    AeLinkLogger.info('SDK data cleared');
+    SmartLinkLogger.info('SDK data cleared');
   }
 
   /// Dispose the SDK and cleanup resources
@@ -314,7 +314,7 @@ class AeLinkSdk {
   /// Force check for deferred deep link (ignores first-launch check)
   static Future<DeepLinkData?> forceCheckDeferredLink() async {
     if (!_validated) {
-      AeLinkLogger.error('Cannot check deferred link — API key is invalid');
+      SmartLinkLogger.error('Cannot check deferred link — API key is invalid');
       return null;
     }
 
@@ -335,7 +335,7 @@ class AeLinkSdk {
 
       return deferredLink;
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace('Force deferred check failed', e, stackTrace);
+      SmartLinkLogger.errorWithStackTrace('Force deferred check failed', e, stackTrace);
       return null;
     }
   }

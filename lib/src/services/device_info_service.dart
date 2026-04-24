@@ -19,7 +19,7 @@ class DeviceInfoService {
   ///
   /// Never throws — every collection group is independently guarded.
   static Future<DeviceInfoResult> getDeviceInfo() async {
-    AeLinkLogger.debug('Collecting full device info...');
+    SmartLinkLogger.debug('Collecting full device info...');
 
     final results = await Future.wait<Map<String, dynamic>>([
       _collectPlatformData(),
@@ -190,7 +190,7 @@ class DeviceInfoService {
         data['iosIsAppOnMac'] = info.isiOSAppOnMac;
       }
     } catch (e) {
-      AeLinkLogger.debug('Platform data error: $e');
+      SmartLinkLogger.debug('Platform data error: $e');
     }
     return data;
   }
@@ -204,7 +204,7 @@ class DeviceInfoService {
       data['appBuildNumber'] = info.buildNumber;
       data['packageName'] = info.packageName;
     } catch (e) {
-      AeLinkLogger.debug('Package data error: $e');
+      SmartLinkLogger.debug('Package data error: $e');
     }
     return data;
   }
@@ -219,7 +219,7 @@ class DeviceInfoService {
       data['isCharging'] =
           state == BatteryState.charging || state == BatteryState.full;
     } catch (e) {
-      AeLinkLogger.debug('Battery data error: $e');
+      SmartLinkLogger.debug('Battery data error: $e');
     }
     return data;
   }
@@ -230,7 +230,7 @@ class DeviceInfoService {
       final results = await _connectivity.checkConnectivity();
       data['connectionType'] = _connectivityLabel(results);
     } catch (e) {
-      AeLinkLogger.debug('Connectivity data error: $e');
+      SmartLinkLogger.debug('Connectivity data error: $e');
     }
     return data;
   }
@@ -248,7 +248,7 @@ class DeviceInfoService {
       data['viewportHeight'] = size.height / dpr;
       data['devicePixelRatio'] = dpr;
     } catch (e) {
-      AeLinkLogger.debug('Screen data error: $e');
+      SmartLinkLogger.debug('Screen data error: $e');
     }
     return data;
   }
@@ -272,7 +272,7 @@ class DeviceInfoService {
           (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
       data['timezoneOffset'] = '${offset.isNegative ? '-' : '+'}$hh:$mm';
     } catch (e) {
-      AeLinkLogger.debug('Locale data error: $e');
+      SmartLinkLogger.debug('Locale data error: $e');
     }
     return data;
   }
@@ -289,7 +289,7 @@ class DeviceInfoService {
       data['invertColors'] = f.invertColors;
       data['disableAnimations'] = f.disableAnimations;
     } catch (e) {
-      AeLinkLogger.debug('Accessibility data error: $e');
+      SmartLinkLogger.debug('Accessibility data error: $e');
     }
     return data;
   }

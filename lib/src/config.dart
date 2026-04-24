@@ -1,10 +1,10 @@
 /// Default SmartLink API base URL
-const String kAeLinkDefaultBaseUrl = 'https://aelink.vercel.app';
+const String kSmartLinkDefaultBaseUrl = 'https://smartlink.vercel.app';
 
 /// Configuration for the SmartLink SDK
-class AeLinkConfig {
+class SmartLinkConfig {
   /// The base URL of the SmartLink API
-  /// Defaults to 'https://aelink.vercel.app'
+  /// Defaults to 'https://smartlink.vercel.app'
   final String apiBaseUrl;
 
   /// The API key for authentication with the SmartLink backend
@@ -31,12 +31,12 @@ class AeLinkConfig {
   /// Custom headers to include in all API requests
   final Map<String, String>? customHeaders;
 
-  /// Create a new AeLinkConfig instance
+  /// Create a new SmartLinkConfig instance
   ///
   /// Only [tenantApiKey] is required. The [apiBaseUrl] defaults to
-  /// 'https://aelink.vercel.app'.
-  AeLinkConfig({
-    this.apiBaseUrl = kAeLinkDefaultBaseUrl,
+  /// 'https://smartlink.vercel.app'.
+  SmartLinkConfig({
+    this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.tenantApiKey,
     this.debug = false,
     this.requestTimeoutSeconds = 30,
@@ -63,5 +63,5 @@ class AeLinkConfig {
 
   @override
   String toString() =>
-      'AeLinkConfig(apiBaseUrl: $apiBaseUrl, debug: $debug, autoHandleDeepLinks: $autoHandleDeepLinks)';
+      'SmartLinkConfig(apiBaseUrl: $apiBaseUrl, debug: $debug, autoHandleDeepLinks: $autoHandleDeepLinks)';
 }

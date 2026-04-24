@@ -22,22 +22,22 @@ class DeepLinkHandler {
       // Check for initial link if app was opened from a deep link
       final initialUri = await _getInitialLink();
       if (initialUri != null) {
-        AeLinkLogger.info('App opened via deep link: $initialUri');
+        SmartLinkLogger.info('App opened via deep link: $initialUri');
         _handleDeepLink(initialUri);
       }
 
       // Listen for subsequent deep links
       _deepLinkSubscription = _appLinks.uriLinkStream.listen(
         (uri) {
-          AeLinkLogger.info('Deep link received: $uri');
+          SmartLinkLogger.info('Deep link received: $uri');
           _handleDeepLink(uri);
         },
         onError: (err) {
-          AeLinkLogger.error('Deep link error', err);
+          SmartLinkLogger.error('Deep link error', err);
         },
       );
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
+      SmartLinkLogger.errorWithStackTrace(
           'Error initializing deep link handler', e, stackTrace);
       rethrow;
     }
@@ -74,14 +74,14 @@ class DeepLinkHandler {
   /// Handle incoming deep link URI
   void _handleDeepLink(Uri uri) {
     try {
-      AeLinkLogger.debug('Processing deep link: $uri');
+      SmartLinkLogger.debug('Processing deep link: $uri');
 
       final deepLinkData = DeepLinkData.fromUrl(uri.toString());
       _deepLinkController.add(deepLinkData);
 
-      AeLinkLogger.debug('Deep link processed: $deepLinkData');
+      SmartLinkLogger.debug('Deep link processed: $deepLinkData');
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
+      SmartLinkLogger.errorWithStackTrace(
           'Error processing deep link', e, stackTrace);
     }
   }
@@ -92,7 +92,7 @@ class DeepLinkHandler {
       final uri = Uri.parse(url);
       _handleDeepLink(uri);
     } catch (e, stackTrace) {
-      AeLinkLogger.errorWithStackTrace(
+      SmartLinkLogger.errorWithStackTrace(
           'Error processing deep link manually', e, stackTrace);
     }
   }
@@ -101,6 +101,6 @@ class DeepLinkHandler {
   Future<void> dispose() async {
     await _deepLinkSubscription.cancel();
     await _deepLinkController.close();
-    AeLinkLogger.info('Deep link handler disposed');
+    SmartLinkLogger.info('Deep link handler disposed');
   }
 }
