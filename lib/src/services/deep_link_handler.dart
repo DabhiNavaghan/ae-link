@@ -80,11 +80,13 @@ class DeepLinkHandler {
       final shortCode = _extractShortCode(uri);
 
       if (shortCode != null && _config != null) {
-        // Resolve short code via API to get full link data
+        // Resolve short code via API, then merge URL query params
         final resolved = await _resolveShortCode(shortCode);
         if (resolved != null) {
-          _deepLinkController.add(resolved);
-          SmartLinkLogger.info('Deep link resolved: ${resolved.eventId ?? resolved.destinationUrl}');
+          // Merge URL query params — they override stored values
+          final merged = _mergeQueryParams(resolved, uri.queryParameters);
+          _deepLinkController.add(merged);
+          SmartLinkLogger.info('Deep link resolved: ${merged.eventId ?? merged.destinationUrl}');
           return;
         }
       }
@@ -189,6 +191,68 @@ class DeepLinkHandler {
     }
 
     return custom.isEmpty ? null : custom;
+  }
+
+  /// Merge URL query params with resolved link data.
+  /// URL params override stored values (e.g., ?utm_source=newvalue).
+  /// Maps both snake_case and camelCase query param names.
+  DeepLinkData _mergeQueryParams(DeepLinkData data, Map<String, String> query) {
+    if (query.isEmpty) return data;
+
+    // Helper to get value: URL param overrides, falls back to stored
+    String? pick(String? stored, List<String> keys) {
+      for (final k in keys) {
+        if (query.containsKey(k) && query[k]!.isNotEmpty) return query[k];
+      }
+      return stored;
+    }
+
+    // Collect custom params from URL (anything not a known key)
+    const knownUrlKeys = {
+      'utm_source', 'utmSource', 'utm_medium', 'utmMedium',
+      'utm_campaign', 'utmCampaign', 'utm_term', 'utmTerm',
+      'utm_content', 'utmContent', 'event_id', 'eventId',
+      'action', 'user_email', 'userEmail', 'user_id', 'userId',
+      'coupon_code', 'couponCode', 'referral_code', 'referralCode',
+    };
+    final urlCustom = <String, dynamic>{};
+    for (final e in query.entries) {
+      if (!knownUrlKeys.contains(e.key)) {
+        urlCustom[e.key] = e.value;
+      }
+    }
+
+    // Merge custom params: stored + URL (URL overrides)
+    final mergedCustom = <String, dynamic>{
+      ...?data.linkParams?.customParams,
+      ...urlCustom,
+    };
+
+    return DeepLinkData(
+      linkId: data.linkId,
+      deferredLinkId: data.deferredLinkId,
+      eventId: pick(data.eventId, ['event_id', 'eventId']),
+      action: pick(data.action, ['action']),
+      destinationUrl: data.destinationUrl,
+      campaignId: data.campaignId,
+      campaignName: data.campaignName,
+      linkType: data.linkType,
+      linkParams: LinkParams(
+        utmSource: pick(data.linkParams?.utmSource, ['utm_source', 'utmSource']),
+        utmMedium: pick(data.linkParams?.utmMedium, ['utm_medium', 'utmMedium']),
+        utmCampaign: pick(data.linkParams?.utmCampaign, ['utm_campaign', 'utmCampaign']),
+        utmTerm: pick(data.linkParams?.utmTerm, ['utm_term', 'utmTerm']),
+        utmContent: pick(data.linkParams?.utmContent, ['utm_content', 'utmContent']),
+        userEmail: pick(data.linkParams?.userEmail, ['user_email', 'userEmail']),
+        userId: pick(data.linkParams?.userId, ['user_id', 'userId']),
+        couponCode: pick(data.linkParams?.couponCode, ['coupon_code', 'couponCode']),
+        referralCode: pick(data.linkParams?.referralCode, ['referral_code', 'referralCode']),
+        customParams: mergedCustom.isEmpty ? null : mergedCustom,
+      ),
+      isDeferred: data.isDeferred,
+      clickedAt: data.clickedAt,
+      rawUrl: data.rawUrl,
+    );
   }
 
   /// Manually process a deep link URL
