@@ -104,6 +104,7 @@ class SmartLinkSdk {
 
       // ── STEP 2: Setup deep link handler ──
       if (config.autoHandleDeepLinks) {
+        sdk._deepLinkHandler.setConfig(config);
         await sdk._deepLinkHandler.initialize();
         sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
           sdk._lastDeepLink = deepLinkData;
