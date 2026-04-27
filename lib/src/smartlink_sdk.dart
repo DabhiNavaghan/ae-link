@@ -212,7 +212,8 @@ class SmartLinkSdk {
   /// Check if SDK has been initialized
   static bool get isInitialized => _instance != null;
 
-  /// Get stream of deep links (both deferred and direct)
+  /// Get stream of direct deep links (app already installed, user clicks link).
+  /// Deferred deep links are returned by [checkDeferredLink] instead.
   static Stream<DeepLinkData> get onDeepLink =>
       _sdkInstance._deepLinkStreamController.stream;
 
@@ -247,7 +248,8 @@ class SmartLinkSdk {
 
       if (deferredLink != null) {
         sdk._lastDeepLink = deferredLink;
-        sdk._deepLinkStreamController.add(deferredLink);
+        // NOTE: Deferred links are NOT pushed to onDeepLink stream.
+        // They are returned by this method and handled via onDeferredDeepLink callback.
 
         await sdk._storageService.setLastDeferredLink(
           jsonEncode(deferredLink.toJson()),
@@ -327,7 +329,7 @@ class SmartLinkSdk {
 
       if (deferredLink != null) {
         sdk._lastDeepLink = deferredLink;
-        sdk._deepLinkStreamController.add(deferredLink);
+        // NOTE: Not pushed to onDeepLink stream — handled via return value
         await sdk._storageService.setLastDeferredLink(
           jsonEncode(deferredLink.toJson()),
         );

@@ -1,13 +1,13 @@
 # SmartLink Flutter SDK
 
-Flutter SDK for deferred deep linking with the SmartLink platform. Handles two scenarios:
+Flutter SDK for deep linking with the SmartLink platform. Handles two separate scenarios with separate callbacks:
 
-1. **App installed** → User clicks link → app opens directly with link data
-2. **App not installed** → User clicks link → redirected to store → installs → app opens with original link data (deferred deep linking)
+1. **Direct Deep Link** (`onDeepLink`) → App is installed, user clicks a link, app opens with link data
+2. **Deferred Deep Link** (`onDeferredDeepLink`) → App is NOT installed, user clicks link → store → installs → first launch delivers the original link data
 
 **Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/ae-link-backend)
 **SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/ae-link)
-**Dashboard:** [smartlink.vercel.app](https://smartlink.vercel.app)
+**Dashboard:** [smartlink-coral.vercel.app](https://smartlink-coral.vercel.app)
 
 ## Setup
 
@@ -23,7 +23,7 @@ dependencies:
 
 ### 2. Register your app in the dashboard
 
-Go to [smartlink.vercel.app/dashboard/apps](https://smartlink.vercel.app/dashboard/apps) and add your app with:
+Go to your dashboard and add your app with:
 
 **Android:**
 - Package name: `com.yourcompany.yourapp`
@@ -51,165 +51,164 @@ Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
         <category android:name="android.intent.category.LAUNCHER" />
     </intent-filter>
 
-    <!-- SmartLink App Links — opens your app when link is clicked -->
+    <!-- SmartLink App Links -->
     <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="https" android:host="smartlink.vercel.app" />
+        <data android:scheme="https" android:host="smartlink-coral.vercel.app" />
     </intent-filter>
 </activity>
 ```
 
-Replace `smartlink.vercel.app` with your deployment domain if different.
-
-**How it works:** Android checks `https://smartlink.vercel.app/.well-known/assetlinks.json` to verify your app is authorized to handle links from this domain. The backend generates this file automatically from your registered app's package name and SHA-256.
-
-**Get your SHA-256 fingerprint:**
-```bash
-cd android
-./gradlew signingReport
-# Look for "SHA-256" under your signing config
-```
+Replace the host with your deployment domain if different.
 
 ### 4. iOS — Universal Links setup
 
-**Step 1:** In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
+In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
 
 ```
-applinks:smartlink.vercel.app
+applinks:smartlink-coral.vercel.app
 ```
-
-**Step 2:** That's it. The backend serves `/.well-known/apple-app-site-association` automatically from your registered app's Team ID and Bundle ID.
-
-**How it works:** iOS checks the AASA file on your domain to verify your app is authorized to handle links. The backend generates this from your registered iOS config.
 
 ### 5. Initialize the SDK
 
-Create `lib/services/aelink_service.dart`:
+Create `lib/services/smart_link_service.dart`:
 
 ```dart
 import 'package:smartlink/smartlink.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 late SmartLinkService smartLink;
 
-Future<DeepLinkData?> initSmartLink({
-  required GlobalKey<NavigatorState> navigatorKey,
-  bool isExistingUser = false,
-}) async {
+Future<DeepLinkData?> initSmartLink({bool isExistingUser = false}) async {
   smartLink = SmartLinkService(
-    apiKey: 'YOUR_API_KEY',  // From dashboard Settings
-    debug: true,              // false in production
-    isExistingUser: isExistingUser,  // true if user already has the app
+    apiKey: 'YOUR_API_KEY',       // From dashboard Settings
+    apiBaseUrl: 'https://smartlink-coral.vercel.app',
+    debug: true,                   // false in production
+    isExistingUser: isExistingUser,
+
+    // Called when app is ALREADY installed and user clicks a link
     onDeepLink: (data) {
-      _handleDeepLink(data, navigatorKey);
+      print('Direct deep link: ${data.destinationUrl}');
+      // Navigate to the content
+    },
+
+    // Called on FIRST LAUNCH if user installed via a link
+    onDeferredDeepLink: (data) {
+      print('Deferred deep link: ${data.destinationUrl}');
+      // Navigate to the content they originally clicked
     },
   );
 
   return await smartLink.initialize();
-}
-
-void _handleDeepLink(DeepLinkData data, GlobalKey<NavigatorState> navKey) {
-  final navigator = navKey.currentState;
-  if (navigator == null) return;
-
-  debugPrint('SmartLink: eventId=${data.eventId}, action=${data.action}, '
-      'deferred=${data.isDeferred}');
-
-  if (data.eventId != null) {
-    navigator.pushNamed('/event/${data.eventId}');
-  }
 }
 ```
 
 Then in `main.dart`:
 
 ```dart
-import 'services/aelink_service.dart';
-
-final navigatorKey = GlobalKey<NavigatorState>();
+import 'services/smart_link_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Pass isExistingUser: true if user is already logged in
-  // (prevents existing users from being counted as new installs)
-  final deferred = await initSmartLink(
-    navigatorKey: navigatorKey,
-    isExistingUser: false,  // or: await isUserLoggedIn()
-  );
+  await initSmartLink(isExistingUser: false);
 
-  runApp(MyApp(
-    navigatorKey: navigatorKey,
-    initialDeepLink: deferred,
-  ));
+  runApp(MyApp());
 }
 ```
 
-## What the SDK does on each launch
+## Two Callbacks — When Each Fires
 
-**First launch after install:**
+### `onDeepLink` — Direct Deep Link
+- App is **already installed** on the device
+- User clicks a SmartLink URL (e.g., `https://smartlink-coral.vercel.app/xGJEQJR`)
+- Android/iOS opens the app directly via App Links / Universal Links
+- `onDeepLink` fires with the link data
+
+### `onDeferredDeepLink` — Deferred Deep Link
+- App is **NOT installed** on the device
+- User clicks a SmartLink URL in their browser
+- Browser collects a device fingerprint and redirects to the app store
+- User installs the app from the store
+- On **first launch**, the SDK matches the device fingerprint
+- `onDeferredDeepLink` fires with the original link data
+
+These callbacks **never overlap** — a deep link is either direct or deferred, never both.
+
+## Available data in DeepLinkData
+
+```dart
+// Both callbacks receive the same DeepLinkData object:
+data.linkId;           // Original link ID
+data.destinationUrl;   // "https://allevents.in/event/..."
+data.eventId;          // "12345"
+data.action;           // "view_event", "buy_ticket"
+data.isDeferred;       // true = deferred, false = direct
+data.deferredLinkId;   // Only set for deferred links
+
+// Campaign data
+data.campaignId;       // Campaign ID
+data.campaignName;     // "summer-promo"
+data.campaign;         // Full campaign object with metadata
+
+// UTM params
+data.linkParams?.utmSource;    // "email"
+data.linkParams?.utmMedium;    // "newsletter"
+data.linkParams?.utmCampaign;  // "summer-promo"
+
+// Special params
+data.linkParams?.couponCode;   // "SAVE20"
+data.linkParams?.referralCode; // "REF123"
+data.linkParams?.userEmail;    // "user@example.com"
+```
+
+## What the SDK logs on each launch
+
+**First launch after install (deferred link matched):**
 ```
 [I] [SmartLink] Initializing SmartLink SDK...
 [I] [SmartLink] Launch: first_install
 [I] [SmartLink] SDK ready
 [I] [SmartLink] First launch — checking deferred link...
-[I] [SmartLink] Deferred link matched: abc123    ← or "No deferred link (organic install)"
+[I] [SmartLink] ✅ DEFERRED LINK MATCHED! Score: 100
+[I] [SmartLink] Deferred link matched: abc123
 ```
 
-**App already installed, user clicks a link:**
+**App already installed, user clicks a link (direct):**
 ```
 [I] [SmartLink] Initializing SmartLink SDK...
 [I] [SmartLink] Launch: return_user
 [I] [SmartLink] SDK ready
-[I] [SmartLink] Deep link received: https://smartlink.vercel.app/xGJEQJR
+[I] [SmartLink] Deep link received: https://smartlink-coral.vercel.app/xGJEQJR
 ```
 
-**Reinstall:**
+**Organic install (no link clicked before):**
 ```
-[I] [SmartLink] Launch: reinstall
+[I] [SmartLink] Launch: first_install
 [I] [SmartLink] First launch — checking deferred link...
-```
-
-## Available data in DeepLinkData
-
-```dart
-onDeepLink: (data) {
-  data.eventId;          // "12345"
-  data.action;           // "view_event", "buy_ticket"
-  data.destinationUrl;   // "https://allevents.in/event/..."
-  data.isDeferred;       // true if from deferred matching
-  data.deferredLinkId;   // ID for tracking
-  data.linkId;           // Original link ID
-
-  // UTM params
-  data.linkParams?.utmSource;    // "email"
-  data.linkParams?.utmCampaign;  // "summer-promo"
-
-  // Special params
-  data.couponCode;       // "SAVE20"
-  data.referralCode;     // "REF123"
-  data.userEmail;        // "user@example.com"
-}
+[I] [SmartLink] No deferred link (organic install)
 ```
 
 ## Troubleshooting
 
 **"App doesn't open when I click the link"**
 - Make sure you registered the app in the dashboard with the correct package name and SHA-256
-- Verify `assetlinks.json` is served: visit `https://smartlink.vercel.app/.well-known/assetlinks.json`
-- On Android: run `adb shell pm get-app-links com.yourpackage` to check verification status
-- On iOS: check Associated Domains is enabled in Xcode with `applinks:smartlink.vercel.app`
+- Verify `assetlinks.json` is served: visit `https://your-domain/.well-known/assetlinks.json`
+- On Android: run `adb shell pm get-app-links com.yourpackage`
+- On iOS: check Associated Domains is enabled in Xcode
 
 **"Deferred link not matching"**
 - Uninstall the app completely before testing (SharedPreferences must be cleared)
-- Click the link in a browser first, then install the app within 72 hours
-- Enable `debug: true` to see matching logs
-- The match requires 60+ points. Same WiFi network = 40 points (IP match)
+- Click the link in a browser first, then install the app within 6 hours
+- Enable `debug: true` to see matching logs and scores
+- The match requires 60+ points (screen + timezone + language + proximity = 60 without IP)
 
-**"Launch: first_install but user already had the app"**
-- Set `isExistingUser: true` for logged-in users when adding the SDK to an existing app
+**"onDeepLink fires but onDeferredDeepLink doesn't (or vice versa)"**
+- They are separate callbacks — only one fires per scenario
+- `onDeepLink` = app was already installed when link was clicked
+- `onDeferredDeepLink` = app was installed AFTER clicking the link
 
 ## License
 

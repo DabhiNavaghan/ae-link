@@ -5,8 +5,11 @@ import 'config.dart';
 import 'models/deep_link_data.dart';
 import 'models/device_info_result.dart';
 
-/// Callback type for handling deep links
+/// Callback type for handling deep links (app already installed, user clicks link)
 typedef DeepLinkCallback = void Function(DeepLinkData data);
+
+/// Callback type for handling deferred deep links (first launch after install via link)
+typedef DeferredDeepLinkCallback = void Function(DeepLinkData data);
 
 /// Callback type for handling errors
 typedef ErrorCallback = void Function(String message, dynamic error);
@@ -16,15 +19,24 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// Handles SDK initialization, deferred deep link checking, deep link
 /// listening, and cleanup. Use this instead of calling SmartLinkSdk directly.
 ///
+/// **Two separate callbacks:**
+/// - [onDeepLink] — fires when the app is already installed and user clicks a link
+/// - [onDeferredDeepLink] — fires on first launch if the user installed via a link
+///
 /// Usage in main.dart:
 /// ```dart
-/// final aeLink = SmartLinkService(
+/// final smartLink = SmartLinkService(
 ///   apiKey: 'your-api-key',
 ///   onDeepLink: (data) {
+///     // App was already installed — user clicked a link
 ///     // Navigate based on data.eventId, data.action, etc.
 ///   },
+///   onDeferredDeepLink: (data) {
+///     // First launch after install via a link
+///     // Navigate to the content they originally clicked
+///   },
 /// );
-/// await aeLink.initialize();
+/// await smartLink.initialize();
 /// ```
 class SmartLinkService {
   /// Backend API base URL (defaults to https://smartlink.vercel.app)
@@ -33,8 +45,13 @@ class SmartLinkService {
   /// Tenant API key from the SmartLink dashboard
   final String apiKey;
 
-  /// Called when a deep link is received (both deferred and direct)
-  final DeepLinkCallback onDeepLink;
+  /// Called when a direct deep link is received (app already installed,
+  /// user clicks a SmartLink URL and it opens the app directly).
+  final DeepLinkCallback? onDeepLink;
+
+  /// Called when a deferred deep link is matched (first launch after
+  /// the user installed the app by clicking a SmartLink URL).
+  final DeferredDeepLinkCallback? onDeferredDeepLink;
 
   /// Called when an error occurs (optional)
   final ErrorCallback? onError;
@@ -58,6 +75,7 @@ class SmartLinkService {
   ///   apiKey: 'KEY',
   ///   isExistingUser: authService.isLoggedIn,
   ///   onDeepLink: (data) { ... },
+  ///   onDeferredDeepLink: (data) { ... },
   /// )
   /// ```
   final bool isExistingUser;
@@ -68,7 +86,8 @@ class SmartLinkService {
   SmartLinkService({
     this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.apiKey,
-    required this.onDeepLink,
+    this.onDeepLink,
+    this.onDeferredDeepLink,
     this.onError,
     this.debug = false,
     this.timeoutSeconds = 30,
@@ -83,7 +102,7 @@ class SmartLinkService {
   ///
   /// 1. Initializes the SmartLink SDK
   /// 2. Checks for deferred deep links (first launch after install)
-  /// 3. Starts listening for incoming app links
+  /// 3. Starts listening for incoming direct deep links
   ///
   /// Returns the deferred [DeepLinkData] if found on first launch, null otherwise.
   Future<DeepLinkData?> initialize() async {
@@ -102,14 +121,12 @@ class SmartLinkService {
         ),
       );
 
-      // 2. Listen for deep links (deferred + direct)
+      // 2. Listen for DIRECT deep links only (app already installed)
       _deepLinkSubscription = SmartLinkSdk.onDeepLink.listen(
         (data) {
-          onDeepLink(data);
-
-          // Auto-confirm deferred links
-          if (data.isDeferred && data.deferredLinkId != null) {
-            SmartLinkSdk.confirmDeepLink(data.deferredLinkId!);
+          // Only fire onDeepLink for direct links, not deferred
+          if (!data.isDeferred) {
+            onDeepLink?.call(data);
           }
         },
         onError: (error) {
@@ -121,6 +138,17 @@ class SmartLinkService {
       final deferredLink = await SmartLinkSdk.checkDeferredLink();
 
       _initialized = true;
+
+      // 4. Fire deferred callback separately if matched
+      if (deferredLink != null) {
+        // Auto-confirm deferred link
+        if (deferredLink.deferredLinkId != null) {
+          SmartLinkSdk.confirmDeepLink(deferredLink.deferredLinkId!);
+        }
+
+        // Fire the deferred callback
+        onDeferredDeepLink?.call(deferredLink);
+      }
 
       return deferredLink;
     } catch (e) {
@@ -156,7 +184,7 @@ class SmartLinkService {
   /// Whether the SDK has been initialized
   bool get isInitialized => _initialized;
 
-  /// Get the last received deep link
+  /// Get the last received deep link (either direct or deferred)
   DeepLinkData? get lastDeepLink => SmartLinkSdk.lastDeepLink;
 
   /// Cleanup — call in your app's dispose
