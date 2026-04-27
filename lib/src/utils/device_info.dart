@@ -83,17 +83,29 @@ class DeviceInfoHelper {
     return 'unknown';
   }
 
-  /// Get screen dimensions (physical pixels to match browser's window.screen)
+  /// Get screen dimensions for fingerprint matching
+  ///
+  /// On mobile browsers, window.screen.width/height returns CSS pixels
+  /// (logical pixels), NOT physical pixels. For example:
+  ///   - Physical: 1080x2400
+  ///   - CSS/Logical: 360x800 (at 3x density)
+  ///
+  /// Flutter's mediaQuery.size also gives logical pixels, so we send
+  /// LOGICAL pixels to match the browser's values.
+  /// We also send physical pixels as extra data for reference.
   static Map<String, double> getScreenDimensions() {
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
     final mediaQuery = MediaQueryData.fromView(view);
     final dpr = mediaQuery.devicePixelRatio;
     return {
-      // Return physical pixels (logical * density) to match
-      // browser's window.screen.width/height which reports physical pixels
-      'width': (mediaQuery.size.width * dpr).roundToDouble(),
-      'height': (mediaQuery.size.height * dpr).roundToDouble(),
+      // Send LOGICAL pixels to match browser's window.screen.width/height
+      // which reports CSS pixels on mobile browsers
+      'width': mediaQuery.size.width.roundToDouble(),
+      'height': mediaQuery.size.height.roundToDouble(),
       'density': dpr,
+      // Also send physical pixels for reference/storage
+      'physicalWidth': (mediaQuery.size.width * dpr).roundToDouble(),
+      'physicalHeight': (mediaQuery.size.height * dpr).roundToDouble(),
     };
   }
 

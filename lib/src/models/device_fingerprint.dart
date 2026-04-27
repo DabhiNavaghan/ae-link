@@ -18,14 +18,20 @@ class DeviceFingerprint {
   /// Operating system (android or ios)
   final String? osName;
 
-  /// Screen width in physical pixels (matches browser's window.screen.width)
+  /// Screen width in logical/CSS pixels (matches browser's window.screen.width)
   final double? screenWidth;
 
-  /// Screen height in physical pixels (matches browser's window.screen.height)
+  /// Screen height in logical/CSS pixels (matches browser's window.screen.height)
   final double? screenHeight;
 
   /// Screen density / DPI
   final double? screenDensity;
+
+  /// Screen width in physical pixels (for reference)
+  final double? physicalWidth;
+
+  /// Screen height in physical pixels (for reference)
+  final double? physicalHeight;
 
   /// Device locale in browser format (e.g., 'en-US')
   final String? locale;
@@ -61,6 +67,8 @@ class DeviceFingerprint {
     this.screenWidth,
     this.screenHeight,
     this.screenDensity,
+    this.physicalWidth,
+    this.physicalHeight,
     this.locale,
     this.timezone,
     this.timezoneOffset,
@@ -83,6 +91,8 @@ class DeviceFingerprint {
       'screen_width': screenWidth,
       'screen_height': screenHeight,
       'screen_density': screenDensity,
+      'physical_width': physicalWidth,
+      'physical_height': physicalHeight,
       'locale': locale,
       'timezone': timezone,
       'timezone_offset': timezoneOffset,
@@ -106,6 +116,8 @@ class DeviceFingerprint {
       screenWidth: (json['screen_width'] as num?)?.toDouble(),
       screenHeight: (json['screen_height'] as num?)?.toDouble(),
       screenDensity: (json['screen_density'] as num?)?.toDouble(),
+      physicalWidth: (json['physical_width'] as num?)?.toDouble(),
+      physicalHeight: (json['physical_height'] as num?)?.toDouble(),
       locale: json['locale'] as String?,
       timezone: json['timezone'] as String?,
       timezoneOffset: json['timezone_offset'] as String?,
@@ -119,6 +131,25 @@ class DeviceFingerprint {
   }
 
   @override
-  String toString() =>
-      'DeviceFingerprint(deviceModel: $deviceModel, osName: $osName, locale: $locale)';
+  String toString() {
+    final parts = <String>[];
+    if (deviceId != null) parts.add('deviceId: $deviceId');
+    if (deviceModel != null) parts.add('deviceModel: $deviceModel');
+    if (deviceManufacturer != null) parts.add('deviceManufacturer: $deviceManufacturer');
+    if (osName != null) parts.add('osName: $osName');
+    if (osVersion != null) parts.add('osVersion: $osVersion');
+    if (screenWidth != null) parts.add('screenWidth: $screenWidth');
+    if (screenHeight != null) parts.add('screenHeight: $screenHeight');
+    if (screenDensity != null) parts.add('screenDensity: $screenDensity');
+    if (physicalWidth != null) parts.add('physicalWidth: $physicalWidth');
+    if (physicalHeight != null) parts.add('physicalHeight: $physicalHeight');
+    if (locale != null) parts.add('locale: $locale');
+    if (timezone != null) parts.add('timezone: $timezone');
+    if (timezoneOffset != null) parts.add('timezoneOffset: $timezoneOffset');
+    if (connectionType != null) parts.add('connectionType: $connectionType');
+    if (appVersion != null) parts.add('appVersion: $appVersion');
+    if (appBuildNumber != null) parts.add('appBuildNumber: $appBuildNumber');
+    if (collectedAt != null) parts.add('collectedAt: $collectedAt');
+    return 'DeviceFingerprint(\n  ${parts.join(',\n  ')}\n)';
+  }
 }

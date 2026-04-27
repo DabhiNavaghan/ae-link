@@ -42,6 +42,11 @@ class DeferredLinkService {
             },
           );
 
+      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      SmartLinkLogger.info('📥 MATCH RESPONSE (${response.statusCode}):');
+      SmartLinkLogger.info(response.body);
+      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -49,9 +54,26 @@ class DeferredLinkService {
           final data = jsonResponse['data'] as Map<String, dynamic>;
 
           if (data['matched'] != true) {
+            // Log debug info if available
+            if (data['debug'] != null) {
+              SmartLinkLogger.info('🔍 MATCH DEBUG INFO:');
+              final debug = data['debug'] as Map<String, dynamic>;
+              SmartLinkLogger.info('  App IP: ${debug['appFingerprint']?['ipAddress']}');
+              SmartLinkLogger.info('  App Screen: ${debug['appFingerprint']?['screen']}');
+              SmartLinkLogger.info('  App Language: ${debug['appFingerprint']?['language']}');
+              SmartLinkLogger.info('  App Timezone: ${debug['appFingerprint']?['timezone']}');
+              SmartLinkLogger.info('  App TZ Offset: ${debug['appFingerprint']?['timezoneOffset']}');
+              SmartLinkLogger.info('  Threshold: ${debug['matchThreshold']}');
+              SmartLinkLogger.info('  Message: ${debug['message']}');
+            }
+            SmartLinkLogger.info('❌ No deferred link matched (organic install)');
             return null;
           }
 
+          SmartLinkLogger.info('✅ DEFERRED LINK MATCHED! Score: ${data['matchScore']}');
+          if (data['matchDetails'] != null) {
+            SmartLinkLogger.info('  Match details: ${data['matchDetails']}');
+          }
           return _parseDeepLinkResponse(data);
         }
       } else if (response.statusCode == 401) {
