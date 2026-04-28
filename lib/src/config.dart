@@ -1,10 +1,10 @@
-/// Default SmartLink API base URL
-const String kSmartLinkDefaultBaseUrl = 'https://smartlink-coral.vercel.app/';
+/// Default SmartLink API base URL (no trailing slash)
+const String kSmartLinkDefaultBaseUrl = 'https://smartlink-coral.vercel.app';
 
 /// Configuration for the SmartLink SDK
 class SmartLinkConfig {
-  /// The base URL of the SmartLink API
-  /// Defaults to 'https://smartlink-coral.vercel.app/'
+  /// The base URL of the SmartLink API (trailing slashes are stripped automatically)
+  /// Defaults to 'https://smartlink-coral.vercel.app'
   final String apiBaseUrl;
 
   /// The API key for authentication with the SmartLink backend
@@ -34,16 +34,22 @@ class SmartLinkConfig {
   /// Create a new SmartLinkConfig instance
   ///
   /// Only [tenantApiKey] is required. The [apiBaseUrl] defaults to
-  /// 'https://smartlink-coral.vercel.app/'.
+  /// 'https://smartlink-coral.vercel.app'.
+  ///
+  /// Trailing slashes in [apiBaseUrl] are stripped automatically to
+  /// prevent double-slash URLs (e.g. `https://host//api/v1/...`)
+  /// which cause 308 redirects on Vercel/Next.js.
   SmartLinkConfig({
-    this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
+    String apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.tenantApiKey,
     this.debug = false,
     this.requestTimeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
     this.isExistingUser = false,
     this.customHeaders,
-  });
+  }) : apiBaseUrl = apiBaseUrl.endsWith('/')
+           ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
+           : apiBaseUrl;
 
   /// Get the complete headers for API requests
   Map<String, String> getHeaders() {

@@ -42,10 +42,10 @@ class DeferredLinkService {
             },
           );
 
-      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      SmartLinkLogger.info('📥 MATCH RESPONSE (${response.statusCode}):');
-      SmartLinkLogger.info(response.body);
-      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // SmartLinkLogger.info('📥 MATCH RESPONSE (${response.statusCode}):');
+      // SmartLinkLogger.info(response.body);
+      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;

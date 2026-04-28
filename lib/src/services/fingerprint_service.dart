@@ -13,7 +13,7 @@ class FingerprintService {
 
   /// Collect device fingerprint
   Future<DeviceFingerprint> collectFingerprint() async {
-    SmartLinkLogger.debug('Collecting fingerprint...');
+    // SmartLinkLogger.debug('Collecting fingerprint...');
 
     try {
       // Get or create device ID
@@ -45,27 +45,27 @@ class FingerprintService {
         collectedAt: DateTime.now(),
       );
 
-      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      SmartLinkLogger.info('📱 APP FINGERPRINT COLLECTED:');
-      SmartLinkLogger.info('  deviceId: ${fingerprint.deviceId}');
-      SmartLinkLogger.info('  deviceModel: ${fingerprint.deviceModel}');
-      SmartLinkLogger.info('  deviceManufacturer: ${fingerprint.deviceManufacturer}');
-      SmartLinkLogger.info('  osName: ${fingerprint.osName}');
-      SmartLinkLogger.info('  osVersion: ${fingerprint.osVersion}');
-      SmartLinkLogger.info('  screenWidth (logical/CSS): ${fingerprint.screenWidth}');
-      SmartLinkLogger.info('  screenHeight (logical/CSS): ${fingerprint.screenHeight}');
-      SmartLinkLogger.info('  screenDensity: ${fingerprint.screenDensity}');
-      SmartLinkLogger.info('  physicalWidth: ${fingerprint.physicalWidth}');
-      SmartLinkLogger.info('  physicalHeight: ${fingerprint.physicalHeight}');
-      SmartLinkLogger.info('  locale: ${fingerprint.locale}');
-      SmartLinkLogger.info('  timezone: ${fingerprint.timezone}');
-      SmartLinkLogger.info('  timezoneOffset: ${fingerprint.timezoneOffset}');
-      SmartLinkLogger.info('  connectionType: ${fingerprint.connectionType}');
-      SmartLinkLogger.info('  appVersion: ${fingerprint.appVersion}');
-      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      SmartLinkLogger.info('📤 JSON being sent to server:');
-      SmartLinkLogger.info('${fingerprint.toJson()}');
-      SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // SmartLinkLogger.info('📱 APP FINGERPRINT COLLECTED:');
+      // SmartLinkLogger.info('  deviceId: ${fingerprint.deviceId}');
+      // SmartLinkLogger.info('  deviceModel: ${fingerprint.deviceModel}');
+      // SmartLinkLogger.info('  deviceManufacturer: ${fingerprint.deviceManufacturer}');
+      // SmartLinkLogger.info('  osName: ${fingerprint.osName}');
+      // SmartLinkLogger.info('  osVersion: ${fingerprint.osVersion}');
+      // SmartLinkLogger.info('  screenWidth (logical/CSS): ${fingerprint.screenWidth}');
+      // SmartLinkLogger.info('  screenHeight (logical/CSS): ${fingerprint.screenHeight}');
+      // SmartLinkLogger.info('  screenDensity: ${fingerprint.screenDensity}');
+      // SmartLinkLogger.info('  physicalWidth: ${fingerprint.physicalWidth}');
+      // SmartLinkLogger.info('  physicalHeight: ${fingerprint.physicalHeight}');
+      // SmartLinkLogger.info('  locale: ${fingerprint.locale}');
+      // SmartLinkLogger.info('  timezone: ${fingerprint.timezone}');
+      // SmartLinkLogger.info('  timezoneOffset: ${fingerprint.timezoneOffset}');
+      // SmartLinkLogger.info('  connectionType: ${fingerprint.connectionType}');
+      // SmartLinkLogger.info('  appVersion: ${fingerprint.appVersion}');
+      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // SmartLinkLogger.info('📤 JSON being sent to server:');
+      // SmartLinkLogger.info('${fingerprint.toJson()}');
+      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return fingerprint;
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(

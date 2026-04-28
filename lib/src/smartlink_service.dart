@@ -39,7 +39,7 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// await smartLink.initialize();
 /// ```
 class SmartLink {
-  /// Backend API base URL (defaults to https://smartlink.vercel.app)
+  /// Backend API base URL (defaults to https://smartlink-coral.vercel.app)
   final String apiBaseUrl;
 
   /// Tenant API key from the SmartLink dashboard
