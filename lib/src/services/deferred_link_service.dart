@@ -54,7 +54,9 @@ class DeferredLinkService {
           }
 
           SmartLinkLogger.info('✅ DEFERRED LINK MATCHED! Score: ${data['matchScore']}');
-          return _parseDeepLinkResponse(data);
+          final parsed = _parseDeepLinkResponse(data);
+          _logDeferredLinkData(parsed, data);
+          return parsed;
         }
       } else if (response.statusCode == 401) {
         SmartLinkLogger.warning('Unauthorized — check your API key');
@@ -110,6 +112,35 @@ class DeferredLinkService {
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace('Error confirming deferred link', e, stackTrace);
       return false;
+    }
+  }
+
+  /// Log deferred link data at verbose level (-1)
+  void _logDeferredLinkData(DeepLinkData parsed, Map<String, dynamic> raw) {
+    SmartLinkLogger.data('deferred_link', {
+      'deferredLinkId': parsed.deferredLinkId,
+      'linkId': parsed.linkId,
+      'eventId': parsed.eventId,
+      'action': parsed.action,
+      'destinationUrl': parsed.destinationUrl,
+      'score': raw['matchScore'],
+    });
+    final lp = parsed.linkParams;
+    if (lp != null) {
+      SmartLinkLogger.data('params', {
+        'utmSource': lp.utmSource,
+        'utmMedium': lp.utmMedium,
+        'utmCampaign': lp.utmCampaign,
+        'couponCode': lp.couponCode,
+        'referralCode': lp.referralCode,
+        'userEmail': lp.userEmail,
+      });
+    }
+    if (raw['campaignId'] != null || raw['campaignName'] != null) {
+      SmartLinkLogger.data('campaign', {
+        'campaignId': raw['campaignId'],
+        'campaignName': raw['campaignName'],
+      });
     }
   }
 

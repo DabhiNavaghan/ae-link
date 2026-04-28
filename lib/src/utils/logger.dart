@@ -68,6 +68,16 @@ class SmartLinkLogger {
     _print('VRB', message);
   }
 
+  /// Log a structured data block — only visible at level -1
+  static void data(String label, Map<String, dynamic> fields) {
+    if (_logLevel >= 0) return;
+    final entries = fields.entries
+        .where((e) => e.value != null)
+        .map((e) => '${e.key}: ${e.value}')
+        .join(' | ');
+    _print('DATA', '$label → $entries');
+  }
+
   // ── Internal ──
 
   static void _print(String level, String message) {

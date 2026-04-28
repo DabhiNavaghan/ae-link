@@ -87,6 +87,7 @@ class DeepLinkHandler {
           final merged = _mergeQueryParams(resolved, uri.queryParameters);
           _deepLinkController.add(merged);
           SmartLinkLogger.info('✅ Deep link resolved');
+          _logDeepLinkData(merged);
           return;
         }
       }
@@ -94,6 +95,8 @@ class DeepLinkHandler {
       // Fallback: parse whatever we can from the URL directly
       final deepLinkData = DeepLinkData.fromUrl(uri.toString());
       _deepLinkController.add(deepLinkData);
+      SmartLinkLogger.info('Deep link parsed from URL');
+      _logDeepLinkData(deepLinkData);
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(
           'Error processing deep link', e, stackTrace);
@@ -267,6 +270,37 @@ class DeepLinkHandler {
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(
           'Error processing deep link manually', e, stackTrace);
+    }
+  }
+
+  /// Log deep link data at verbose level (-1)
+  void _logDeepLinkData(DeepLinkData data) {
+    SmartLinkLogger.data('link', {
+      'type': data.isDeferred ? 'deferred' : 'direct',
+      'linkId': data.linkId,
+      'eventId': data.eventId,
+      'action': data.action,
+      'destinationUrl': data.destinationUrl,
+      'linkType': data.linkType,
+    });
+    if (data.campaignId != null || data.campaignName != null) {
+      SmartLinkLogger.data('campaign', {
+        'campaignId': data.campaignId,
+        'campaignName': data.campaignName,
+        if (data.campaign != null) 'slug': data.campaign?['slug'],
+        if (data.campaign != null) 'status': data.campaign?['status'],
+      });
+    }
+    final lp = data.linkParams;
+    if (lp != null) {
+      SmartLinkLogger.data('params', {
+        'utmSource': lp.utmSource,
+        'utmMedium': lp.utmMedium,
+        'utmCampaign': lp.utmCampaign,
+        'couponCode': lp.couponCode,
+        'referralCode': lp.referralCode,
+        'userEmail': lp.userEmail,
+      });
     }
   }
 

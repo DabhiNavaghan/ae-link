@@ -193,7 +193,13 @@ The SDK uses an integer-based log level system:
 ```
 
 **logLevel: -1 (verbose) — deep debugging:**
-Same as above, plus extra detail on errors and internal steps.
+Same as above, plus link data, campaign data, and params:
+```
+[SmartLink] INFO  ✅ DEFERRED LINK MATCHED! Score: 95
+[SmartLink] DATA  deferred_link → deferredLinkId: abc123 | linkId: lnk_456 | eventId: 789 | action: view_event | destinationUrl: https://allevents.in/event/789
+[SmartLink] DATA  campaign → campaignId: camp_001 | campaignName: summer-promo
+[SmartLink] DATA  params → utmSource: email | utmCampaign: summer-promo | couponCode: SAVE20
+```
 
 **logLevel: 1 (release) — production:**
 No output.
