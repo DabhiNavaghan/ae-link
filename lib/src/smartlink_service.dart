@@ -14,7 +14,7 @@ typedef DeferredDeepLinkCallback = void Function(DeepLinkData data);
 /// Callback type for handling errors
 typedef ErrorCallback = void Function(String message, dynamic error);
 
-/// SmartLinkService — single entry point for all SmartLink functionality.
+/// SmartLink — single entry point for all SmartLink functionality.
 ///
 /// Handles SDK initialization, deferred deep link checking, deep link
 /// listening, and cleanup. Use this instead of calling SmartLinkSdk directly.
@@ -25,7 +25,7 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 ///
 /// Usage in main.dart:
 /// ```dart
-/// final smartLink = SmartLinkService(
+/// final smartLink = SmartLink(
 ///   apiKey: 'your-api-key',
 ///   onDeepLink: (data) {
 ///     // App was already installed — user clicked a link
@@ -38,7 +38,7 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// );
 /// await smartLink.initialize();
 /// ```
-class SmartLinkService {
+class SmartLink {
   /// Backend API base URL (defaults to https://smartlink.vercel.app)
   final String apiBaseUrl;
 
@@ -71,7 +71,7 @@ class SmartLinkService {
   ///
   /// Example: set based on whether the user is logged in:
   /// ```dart
-  /// SmartLinkService(
+  /// SmartLink(
   ///   apiKey: 'KEY',
   ///   isExistingUser: authService.isLoggedIn,
   ///   onDeepLink: (data) { ... },
@@ -83,7 +83,7 @@ class SmartLinkService {
   StreamSubscription<DeepLinkData>? _deepLinkSubscription;
   bool _initialized = false;
 
-  SmartLinkService({
+  SmartLink({
     this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.apiKey,
     this.onDeepLink,

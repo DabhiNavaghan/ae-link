@@ -1,35 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:ae_link/ae_link.dart';
+import 'package:smartlink/smartlink.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize AE-LINK SDK
-  await AeLinkSdk.initialize(
-    AeLinkConfig(
-      apiBaseUrl: 'https://allevents.in', // Replace with actual API URL
-      tenantApiKey: 'your-api-key-here', // Replace with actual API key
-      debug: true,
-    ),
+  // Initialize SmartLink with callbacks
+  final smartLink = SmartLink(
+    apiKey: 'your-api-key-here',
+    debug: true,
+    onDeepLink: (data) {
+      final url = data.destinationUrl ?? data.rawUrl;
+      if (url == null || url.isEmpty) return;
+      // Navigate to destination
+      print('Deep link: $url');
+    },
+    onDeferredDeepLink: (data) {
+      final url = data.destinationUrl ?? data.rawUrl;
+      if (url == null || url.isEmpty) return;
+      // Navigate to destination (first launch after install)
+      print('Deferred deep link: $url');
+    },
   );
 
-  // Listen for deep links (both deferred and direct)
-  AeLinkSdk.onDeepLink.listen((deepLinkData) {
-    print('Deep link received:');
-    print('  Event ID: ${deepLinkData.eventId}');
-    print('  Action: ${deepLinkData.action}');
-    print('  Is Deferred: ${deepLinkData.isDeferred}');
-    print('  UTM Params: ${deepLinkData.utmParams}');
-    print('  Coupon: ${deepLinkData.couponCode}');
-    // TODO: Navigate to event details screen based on deepLinkData
-  });
-
-  // Check for deferred deep link on first launch
-  final deferredLink = await AeLinkSdk.checkDeferredLink();
-  if (deferredLink != null) {
-    print('Deferred link found! Event ID: ${deferredLink.eventId}');
-    // TODO: Navigate to the deferred link
-  }
+  await smartLink.initialize();
 
   runApp(const MyApp());
 }
@@ -40,7 +33,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AE-LINK Example',
+      title: 'SmartLink Example',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
@@ -67,8 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _setupDeepLinkListener() {
-    // Listen for deep links
-    AeLinkSdk.onDeepLink.listen((deepLinkData) {
+    SmartLinkSdk.onDeepLink.listen((deepLinkData) {
       setState(() {
         _currentDeepLink = deepLinkData;
       });
@@ -77,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleDeepLink(DeepLinkData deepLinkData) {
-    // Handle different actions
     switch (deepLinkData.action) {
       case 'view_event':
         _navigateToEvent(deepLinkData.eventId);
@@ -92,9 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
     }
 
-    // If this is a deferred link, confirm it was shown
     if (deepLinkData.isDeferred && deepLinkData.deferredLinkId != null) {
-      AeLinkSdk.confirmDeepLink(deepLinkData.deferredLinkId!);
+      SmartLinkSdk.confirmDeepLink(deepLinkData.deferredLinkId!);
     }
   }
 
@@ -120,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AE-LINK Example'),
+        title: const Text('SmartLink Example'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -147,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             FutureBuilder<String?>(
-              future: Future.value(AeLinkSdk.getDeviceId()),
+              future: Future.value(SmartLinkSdk.getDeviceId()),
               builder: (context, snapshot) {
                 return Text('Device ID: ${snapshot.data ?? "Loading..."}');
               },
@@ -155,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                final link = await AeLinkSdk.forceCheckDeferredLink();
+                final link = await SmartLinkSdk.forceCheckDeferredLink();
                 if (link != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Deferred link found!')),
@@ -171,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                AeLinkSdk.processDeepLink(
+                SmartLinkSdk.processDeepLink(
                   'allevents://event?event_id=12345&action=view_event&utm_source=manual&utm_campaign=test',
                 );
               },
@@ -236,8 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // Clean up when app is closed
-    AeLinkSdk.dispose();
+    SmartLinkSdk.dispose();
     super.dispose();
   }
 }

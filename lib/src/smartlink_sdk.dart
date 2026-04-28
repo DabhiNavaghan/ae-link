@@ -94,8 +94,8 @@ class SmartLinkSdk {
           '  Get your API key from the SmartLink dashboard:\n'
           '  ${config.apiBaseUrl}/dashboard/settings\n'
           '  \n'
-          '  Pass it when creating SmartLinkService:\n'
-          '  SmartLinkService(apiKey: "YOUR_KEY", ...)\n'
+          '  Pass it when creating SmartLink:\n'
+          '  SmartLink(apiKey: "YOUR_KEY", ...)\n'
           '══════════════════════════════════════════════════════════',
         );
         // Don't proceed with deep link setup — key is invalid

@@ -79,10 +79,10 @@ Create `lib/services/smart_link_service.dart`:
 import 'package:smartlink/smartlink.dart';
 import 'package:flutter/widgets.dart';
 
-late SmartLinkService smartLink;
+late SmartLink smartLink;
 
 Future<DeepLinkData?> initSmartLink({bool isExistingUser = false}) async {
-  smartLink = SmartLinkService(
+  smartLink = SmartLink(
     apiKey: 'YOUR_API_KEY',       // From dashboard Settings
     apiBaseUrl: 'https://smartlink-coral.vercel.app',
     debug: true,                   // false in production
