@@ -10,8 +10,11 @@ class SmartLinkConfig {
   /// The API key for authentication with the SmartLink backend
   final String tenantApiKey;
 
-  /// Enable debug logging
+  /// Enable debug logging (kept for backward compatibility, use logLevel instead)
   final bool debug;
+
+  /// Log level: -1 = detailed debug, 0 = minimal debug, 1 = release/silent
+  final int logLevel;
 
   /// Timeout duration for API calls in seconds
   final int requestTimeoutSeconds;
@@ -33,23 +36,26 @@ class SmartLinkConfig {
 
   /// Create a new SmartLinkConfig instance
   ///
-  /// Only [tenantApiKey] is required. The [apiBaseUrl] defaults to
-  /// 'https://smartlink-coral.vercel.app'.
+  /// [logLevel] controls log verbosity:
+  ///   -1 = detailed debug (structured output, HTTP bodies, timings)
+  ///    0 = minimal debug (key lifecycle events only)
+  ///    1 = release / silent (no logs, default)
   ///
-  /// Trailing slashes in [apiBaseUrl] are stripped automatically to
-  /// prevent double-slash URLs (e.g. `https://host//api/v1/...`)
-  /// which cause 308 redirects on Vercel/Next.js.
+  /// [debug] is kept for backward compatibility — if set to true and
+  /// logLevel is not explicitly provided, logLevel defaults to 0.
   SmartLinkConfig({
     String apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.tenantApiKey,
     this.debug = false,
+    int? logLevel,
     this.requestTimeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
     this.isExistingUser = false,
     this.customHeaders,
   }) : apiBaseUrl = apiBaseUrl.endsWith('/')
            ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
-           : apiBaseUrl;
+           : apiBaseUrl,
+       logLevel = logLevel ?? (debug ? 0 : 1);
 
   /// Get the complete headers for API requests
   Map<String, String> getHeaders() {
@@ -69,5 +75,5 @@ class SmartLinkConfig {
 
   @override
   String toString() =>
-      'SmartLinkConfig(apiBaseUrl: $apiBaseUrl, debug: $debug, autoHandleDeepLinks: $autoHandleDeepLinks)';
+      'SmartLinkConfig(apiBaseUrl: $apiBaseUrl, logLevel: $logLevel, autoHandleDeepLinks: $autoHandleDeepLinks)';
 }

@@ -13,7 +13,8 @@ class FingerprintService {
 
   /// Collect device fingerprint
   Future<DeviceFingerprint> collectFingerprint() async {
-    // SmartLinkLogger.debug('Collecting fingerprint...');
+    SmartLinkLogger.verbose('Collecting fingerprint...');
+    final stopwatch = Stopwatch()..start();
 
     try {
       // Get or create device ID
@@ -45,27 +46,25 @@ class FingerprintService {
         collectedAt: DateTime.now(),
       );
 
-      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      // SmartLinkLogger.info('📱 APP FINGERPRINT COLLECTED:');
-      // SmartLinkLogger.info('  deviceId: ${fingerprint.deviceId}');
-      // SmartLinkLogger.info('  deviceModel: ${fingerprint.deviceModel}');
-      // SmartLinkLogger.info('  deviceManufacturer: ${fingerprint.deviceManufacturer}');
-      // SmartLinkLogger.info('  osName: ${fingerprint.osName}');
-      // SmartLinkLogger.info('  osVersion: ${fingerprint.osVersion}');
-      // SmartLinkLogger.info('  screenWidth (logical/CSS): ${fingerprint.screenWidth}');
-      // SmartLinkLogger.info('  screenHeight (logical/CSS): ${fingerprint.screenHeight}');
-      // SmartLinkLogger.info('  screenDensity: ${fingerprint.screenDensity}');
-      // SmartLinkLogger.info('  physicalWidth: ${fingerprint.physicalWidth}');
-      // SmartLinkLogger.info('  physicalHeight: ${fingerprint.physicalHeight}');
-      // SmartLinkLogger.info('  locale: ${fingerprint.locale}');
-      // SmartLinkLogger.info('  timezone: ${fingerprint.timezone}');
-      // SmartLinkLogger.info('  timezoneOffset: ${fingerprint.timezoneOffset}');
-      // SmartLinkLogger.info('  connectionType: ${fingerprint.connectionType}');
-      // SmartLinkLogger.info('  appVersion: ${fingerprint.appVersion}');
-      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      // SmartLinkLogger.info('📤 JSON being sent to server:');
-      // SmartLinkLogger.info('${fingerprint.toJson()}');
-      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      stopwatch.stop();
+      SmartLinkLogger.timing('fingerprint_collect', stopwatch.elapsed);
+      SmartLinkLogger.data('fingerprint', {
+        'deviceId': fingerprint.deviceId,
+        'deviceModel': fingerprint.deviceModel,
+        'deviceManufacturer': fingerprint.deviceManufacturer,
+        'osName': fingerprint.osName,
+        'osVersion': fingerprint.osVersion,
+        'screenWidth': fingerprint.screenWidth,
+        'screenHeight': fingerprint.screenHeight,
+        'screenDensity': fingerprint.screenDensity,
+        'physicalWidth': fingerprint.physicalWidth,
+        'physicalHeight': fingerprint.physicalHeight,
+        'locale': fingerprint.locale,
+        'timezone': fingerprint.timezone,
+        'timezoneOffset': fingerprint.timezoneOffset,
+        'connectionType': fingerprint.connectionType,
+        'appVersion': fingerprint.appVersion,
+      });
       return fingerprint;
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(

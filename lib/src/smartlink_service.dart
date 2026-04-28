@@ -56,8 +56,11 @@ class SmartLink {
   /// Called when an error occurs (optional)
   final ErrorCallback? onError;
 
-  /// Enable debug logging
+  /// Enable debug logging (backward compatible, use logLevel instead)
   final bool debug;
+
+  /// Log level: -1 = detailed debug, 0 = minimal debug, 1 = release/silent
+  final int? logLevel;
 
   /// API request timeout in seconds
   final int timeoutSeconds;
@@ -90,6 +93,7 @@ class SmartLink {
     this.onDeferredDeepLink,
     this.onError,
     this.debug = false,
+    this.logLevel,
     this.timeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
     this.isExistingUser = false,
@@ -115,6 +119,7 @@ class SmartLink {
           apiBaseUrl: apiBaseUrl,
           tenantApiKey: apiKey,
           debug: debug,
+          logLevel: logLevel,
           requestTimeoutSeconds: timeoutSeconds,
           autoHandleDeepLinks: autoHandleDeepLinks,
           isExistingUser: isExistingUser,

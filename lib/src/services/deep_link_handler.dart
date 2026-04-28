@@ -166,10 +166,11 @@ class DeepLinkHandler {
           );
         }
       } else {
-        SmartLinkLogger.debug('Failed to resolve short code: ${response.statusCode}');
+        SmartLinkLogger.verbose('Failed to resolve short code: ${response.statusCode}');
+        SmartLinkLogger.http('GET', url.toString(), status: response.statusCode, body: response.body);
       }
     } catch (e) {
-      SmartLinkLogger.debug('Short code resolve failed: $e');
+      SmartLinkLogger.verbose('Short code resolve failed: $e');
     }
     return null;
   }

@@ -5,9 +5,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize SmartLink with callbacks
+  // logLevel: -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
   final smartLink = SmartLink(
     apiKey: 'your-api-key-here',
-    debug: true,
+    logLevel: 0, // minimal debug — use -1 for detailed structured logs
     onDeepLink: (data) {
       final url = data.destinationUrl ?? data.rawUrl;
       if (url == null || url.isEmpty) return;

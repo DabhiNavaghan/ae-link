@@ -56,7 +56,7 @@ class SmartLinkSdk {
     _validated = false;
     final sdk = _sdkInstance;
 
-    SmartLinkLogger.init(debug: config.debug);
+    SmartLinkLogger.init(logLevel: config.logLevel);
     SmartLinkLogger.info('Initializing SmartLink SDK...');
 
     try {

@@ -42,10 +42,7 @@ class DeferredLinkService {
             },
           );
 
-      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      // SmartLinkLogger.info('📥 MATCH RESPONSE (${response.statusCode}):');
-      // SmartLinkLogger.info(response.body);
-      // SmartLinkLogger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      SmartLinkLogger.http('POST', url.toString(), status: response.statusCode, body: response.body);
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
@@ -54,26 +51,29 @@ class DeferredLinkService {
           final data = jsonResponse['data'] as Map<String, dynamic>;
 
           if (data['matched'] != true) {
-            // Log debug info if available
             if (data['debug'] != null) {
-              // SmartLinkLogger.info('🔍 MATCH DEBUG INFO:');
-              // final debug = data['debug'] as Map<String, dynamic>;
-              // SmartLinkLogger.info('  App IP: ${debug['appFingerprint']?['ipAddress']}');
-              // SmartLinkLogger.info('  App Screen: ${debug['appFingerprint']?['screen']}');
-              // SmartLinkLogger.info('  App Language: ${debug['appFingerprint']?['language']}');
-              // SmartLinkLogger.info('  App Timezone: ${debug['appFingerprint']?['timezone']}');
-              // SmartLinkLogger.info('  App TZ Offset: ${debug['appFingerprint']?['timezoneOffset']}');
-              // SmartLinkLogger.info('  Threshold: ${debug['matchThreshold']}');
-              // SmartLinkLogger.info('  Message: ${debug['message']}');
+              final debug = data['debug'] as Map<String, dynamic>;
+              SmartLinkLogger.data('match_debug', {
+                'appIp': debug['appFingerprint']?['ipAddress'],
+                'appScreen': debug['appFingerprint']?['screen'],
+                'appLanguage': debug['appFingerprint']?['language'],
+                'appTimezone': debug['appFingerprint']?['timezone'],
+                'appTzOffset': debug['appFingerprint']?['timezoneOffset'],
+                'threshold': debug['matchThreshold'],
+                'message': debug['message'],
+              });
             }
-            SmartLinkLogger.info('❌ No deferred link matched (organic install)');
+            SmartLinkLogger.info('No deferred link matched (organic install)');
             return null;
           }
 
-          SmartLinkLogger.info('✅ DEFERRED LINK MATCHED! Score: ${data['matchScore']}');
-          if (data['matchDetails'] != null) {
-            SmartLinkLogger.info('  Match details: ${data['matchDetails']}');
-          }
+          SmartLinkLogger.info('Deferred link matched, score: ${data['matchScore']}');
+          SmartLinkLogger.data('match_result', {
+            'score': data['matchScore'],
+            'deferredLinkId': data['deferredLinkId'],
+            'linkId': data['linkId'],
+            if (data['matchDetails'] != null) 'details': data['matchDetails'],
+          });
           return _parseDeepLinkResponse(data);
         }
       } else if (response.statusCode == 401) {
@@ -103,7 +103,7 @@ class DeferredLinkService {
         'deviceId': config.tenantApiKey.hashCode.toString(),
       });
 
-      SmartLinkLogger.debug('POST ${url.toString()}');
+      SmartLinkLogger.http('POST', url.toString());
 
       final response = await _httpClient
           .post(
@@ -120,7 +120,7 @@ class DeferredLinkService {
             },
           );
 
-      SmartLinkLogger.debug('Response status: ${response.statusCode}');
+      SmartLinkLogger.http('POST', url.toString(), status: response.statusCode, body: response.body);
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
