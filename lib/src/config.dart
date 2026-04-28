@@ -1,10 +1,10 @@
 /// Default SmartLink API base URL
-const String kSmartLinkDefaultBaseUrl = 'https://smartlink.vercel.app';
+const String kSmartLinkDefaultBaseUrl = 'https://smartlink-coral.vercel.app/';
 
 /// Configuration for the SmartLink SDK
 class SmartLinkConfig {
   /// The base URL of the SmartLink API
-  /// Defaults to 'https://smartlink.vercel.app'
+  /// Defaults to 'https://smartlink-coral.vercel.app/'
   final String apiBaseUrl;
 
   /// The API key for authentication with the SmartLink backend
@@ -34,7 +34,7 @@ class SmartLinkConfig {
   /// Create a new SmartLinkConfig instance
   ///
   /// Only [tenantApiKey] is required. The [apiBaseUrl] defaults to
-  /// 'https://smartlink.vercel.app'.
+  /// 'https://smartlink-coral.vercel.app/'.
   SmartLinkConfig({
     this.apiBaseUrl = kSmartLinkDefaultBaseUrl,
     required this.tenantApiKey,
