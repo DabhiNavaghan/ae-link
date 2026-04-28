@@ -85,7 +85,7 @@ Future<DeepLinkData?> initSmartLink({bool isExistingUser = false}) async {
   smartLink = SmartLink(
     apiKey: 'YOUR_API_KEY',       // From dashboard Settings
     apiBaseUrl: 'https://smartlink-coral.vercel.app',
-    debug: true,                   // false in production
+    logLevel: 0,                   // -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
     isExistingUser: isExistingUser,
 
     // Called when app is ALREADY installed and user clicks a link
@@ -164,32 +164,44 @@ data.linkParams?.referralCode; // "REF123"
 data.linkParams?.userEmail;    // "user@example.com"
 ```
 
-## What the SDK logs on each launch
+## Log Levels
 
-**First launch after install (deferred link matched):**
+The SDK uses an integer-based log level system:
+
+| Level | Name | Use For |
+|-------|------|---------|
+| `-1` | Detailed debug | Structured verbose logs — fingerprint data, HTTP requests/responses, timing |
+| `0` | Minimal debug | Info, warnings, errors — good for development |
+| `1` | Release | Silent — no logs (default) |
+
+**logLevel: 0 (minimal debug) — development:**
 ```
-[I] [SmartLink] Initializing SmartLink SDK...
-[I] [SmartLink] Launch: first_install
-[I] [SmartLink] SDK ready
-[I] [SmartLink] First launch — checking deferred link...
-[I] [SmartLink] ✅ DEFERRED LINK MATCHED! Score: 100
-[I] [SmartLink] Deferred link matched: abc123
+[SmartLink] INF  Initializing SmartLink SDK...
+[SmartLink] INF  Launch: first_install
+[SmartLink] INF  SDK ready
+[SmartLink] INF  First launch — checking deferred link...
+[SmartLink] INF  ✅ DEFERRED LINK MATCHED! Score: 100
+[SmartLink] INF  Deferred link matched: abc123
 ```
 
-**App already installed, user clicks a link (direct):**
+**logLevel: -1 (detailed debug) — deep debugging:**
 ```
-[I] [SmartLink] Initializing SmartLink SDK...
-[I] [SmartLink] Launch: return_user
-[I] [SmartLink] SDK ready
-[I] [SmartLink] Deep link received: https://smartlink-coral.vercel.app/xGJEQJR
+[SmartLink] VRB  Collecting full device info...
+[SmartLink] DAT  ┌ fingerprint
+               │ screenWidth: 1080.0
+               │ screenHeight: 2400.0
+               │ locale: en-US
+               │ timezone: +05:30
+               └
+[SmartLink] HTTP GET https://smartlink-coral.vercel.app/api/v1/deferred/match → 200
+[SmartLink] TIME fingerprint_collection: 42ms
+[SmartLink] INF  ✅ DEFERRED LINK MATCHED! Score: 100
 ```
 
-**Organic install (no link clicked before):**
-```
-[I] [SmartLink] Launch: first_install
-[I] [SmartLink] First launch — checking deferred link...
-[I] [SmartLink] No deferred link (organic install)
-```
+**logLevel: 1 (release) — production:**
+No output.
+
+**Backward compatibility:** `debug: true` still works and maps to `logLevel: 0`.
 
 ## Troubleshooting
 
@@ -202,7 +214,7 @@ data.linkParams?.userEmail;    // "user@example.com"
 **"Deferred link not matching"**
 - Uninstall the app completely before testing (SharedPreferences must be cleared)
 - Click the link in a browser first, then install the app within 6 hours
-- Enable `debug: true` to see matching logs and scores
+- Set `logLevel: -1` to see detailed matching logs, fingerprint data, and scores
 - The match requires 60+ points (screen + timezone + language + proximity = 60 without IP)
 
 **"onDeepLink fires but onDeferredDeepLink doesn't (or vice versa)"**

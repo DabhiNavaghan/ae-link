@@ -76,8 +76,8 @@ class AeLinkConstants {
   /// Tenant API key (obtained from AE-LINK dashboard)
   static const String apiKey = 'your-api-key-here';
 
-  /// Enable debug logging in development
-  static const bool debugLogging = true; // Set to false in production
+  /// Log level: -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
+  static const int logLevel = 0; // Use 1 in production, -1 for deep debugging
 
   /// Request timeout in seconds
   static const int requestTimeoutSeconds = 30;
@@ -265,7 +265,7 @@ void main() async {
       AeLinkConfig(
         apiBaseUrl: AeLinkConstants.apiBaseUrl,
         tenantApiKey: AeLinkConstants.apiKey,
-        debug: AeLinkConstants.debugLogging,
+        logLevel: AeLinkConstants.logLevel,
         requestTimeoutSeconds: AeLinkConstants.requestTimeoutSeconds,
         autoHandleDeepLinks: AeLinkConstants.autoHandleDeepLinks,
       ),
@@ -584,21 +584,26 @@ if (deferredLink != null) {
 
 ### Debug Logging
 
-Enable debug logging to see detailed information:
+Use the `logLevel` parameter to control SDK output:
 
 ```dart
 AeLinkConfig(
   apiBaseUrl: 'https://allevents.in',
   tenantApiKey: 'your-key',
-  debug: true,  // Enable debug logging
+  logLevel: 0,  // -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
 )
 ```
 
-Check the console for:
-- Device fingerprint collection
-- API requests and responses
-- Deep link processing
-- Navigation actions
+**logLevel: 0** — Info, warnings, and errors. Good for development.
+
+**logLevel: -1** — Everything above plus structured verbose output:
+- Device fingerprint data (screen, locale, timezone, etc.)
+- HTTP requests and responses with status codes
+- Operation timing (e.g., fingerprint collection duration)
+
+**logLevel: 1** — Silent. Use in production.
+
+**Backward compatible:** `debug: true` still works and maps to `logLevel: 0`.
 
 ## Troubleshooting
 
@@ -705,21 +710,21 @@ void _navigateToEvent(NavigatorState? navigator, String? eventId) {
    - Update apple-app-site-association file
 
 **Debug:**
-Check the logs with `debug: true` to see which permissions are failing.
+Set `logLevel: -1` to see detailed logs including HTTP errors and fingerprint data.
 
 ### Performance Issues
 
 If deep link handling is causing app slowdowns:
 
 1. Set `autoHandleDeepLinks: false` if you don't need immediate handling
-2. Use `debug: false` in production
+2. Use `logLevel: 1` in production (no logs)
 3. Increase `requestTimeoutSeconds` if network is slow
 
 ```dart
 AeLinkConfig(
   apiBaseUrl: 'https://allevents.in',
   tenantApiKey: 'your-key',
-  debug: false,
+  logLevel: 1,  // Silent in production
   requestTimeoutSeconds: 45,
   autoHandleDeepLinks: true,
 )
@@ -752,7 +757,7 @@ Before deploying to production:
 - [ ] iOS Associated Domains configured
 - [ ] apple-app-site-association file uploaded to backend
 - [ ] API base URL and API key configured correctly
-- [ ] Debug logging disabled (`debug: false`)
+- [ ] Log level set to release (`logLevel: 1`)
 - [ ] Deep links tested on both iOS and Android
 - [ ] Deferred links tested in staging environment
 - [ ] Analytics integration added
