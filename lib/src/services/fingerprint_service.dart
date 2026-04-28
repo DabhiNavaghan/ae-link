@@ -13,8 +13,7 @@ class FingerprintService {
 
   /// Collect device fingerprint
   Future<DeviceFingerprint> collectFingerprint() async {
-    SmartLinkLogger.verbose('Collecting fingerprint...');
-    final stopwatch = Stopwatch()..start();
+    SmartLinkLogger.info('Collecting fingerprint...');
 
     try {
       // Get or create device ID
@@ -46,25 +45,7 @@ class FingerprintService {
         collectedAt: DateTime.now(),
       );
 
-      stopwatch.stop();
-      SmartLinkLogger.timing('fingerprint_collect', stopwatch.elapsed);
-      SmartLinkLogger.data('fingerprint', {
-        'deviceId': fingerprint.deviceId,
-        'deviceModel': fingerprint.deviceModel,
-        'deviceManufacturer': fingerprint.deviceManufacturer,
-        'osName': fingerprint.osName,
-        'osVersion': fingerprint.osVersion,
-        'screenWidth': fingerprint.screenWidth,
-        'screenHeight': fingerprint.screenHeight,
-        'screenDensity': fingerprint.screenDensity,
-        'physicalWidth': fingerprint.physicalWidth,
-        'physicalHeight': fingerprint.physicalHeight,
-        'locale': fingerprint.locale,
-        'timezone': fingerprint.timezone,
-        'timezoneOffset': fingerprint.timezoneOffset,
-        'connectionType': fingerprint.connectionType,
-        'appVersion': fingerprint.appVersion,
-      });
+      SmartLinkLogger.info('✅ Fingerprint collected');
       return fingerprint;
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(

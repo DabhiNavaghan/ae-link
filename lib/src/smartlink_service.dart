@@ -113,20 +113,10 @@ class SmartLink {
     if (_initialized) return null;
 
     try {
-      // 1. Initialize SDK
-      await SmartLinkSdk.initialize(
-        SmartLinkConfig(
-          apiBaseUrl: apiBaseUrl,
-          tenantApiKey: apiKey,
-          debug: debug,
-          logLevel: logLevel,
-          requestTimeoutSeconds: timeoutSeconds,
-          autoHandleDeepLinks: autoHandleDeepLinks,
-          isExistingUser: isExistingUser,
-        ),
-      );
-
-      // 2. Listen for DIRECT deep links only (app already installed)
+      // 1. Subscribe to the SDK stream BEFORE initializing.
+      //    SmartLinkSdk uses a broadcast stream — if we subscribe after
+      //    initialize(), the cold-start deep link is emitted and lost
+      //    before we're listening.
       _deepLinkSubscription = SmartLinkSdk.onDeepLink.listen(
         (data) {
           // Only fire onDeepLink for direct links, not deferred
@@ -137,6 +127,19 @@ class SmartLink {
         onError: (error) {
           onError?.call('Deep link stream error', error);
         },
+      );
+
+      // 2. Initialize SDK (may emit the initial deep link during init)
+      await SmartLinkSdk.initialize(
+        SmartLinkConfig(
+          apiBaseUrl: apiBaseUrl,
+          tenantApiKey: apiKey,
+          debug: debug,
+          logLevel: logLevel,
+          requestTimeoutSeconds: timeoutSeconds,
+          autoHandleDeepLinks: autoHandleDeepLinks,
+          isExistingUser: isExistingUser,
+        ),
       );
 
       // 3. Check for deferred deep link on first launch

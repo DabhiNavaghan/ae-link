@@ -170,33 +170,30 @@ The SDK uses an integer-based log level system:
 
 | Level | Name | Use For |
 |-------|------|---------|
-| `-1` | Detailed debug | Structured verbose logs — fingerprint data, HTTP requests/responses, timing |
-| `0` | Minimal debug | Info, warnings, errors — good for development |
+| `-1` | Verbose | Extra detail for deep debugging |
+| `0` | Minimal debug | Actions + results only — good for development |
 | `1` | Release | Silent — no logs (default) |
 
 **logLevel: 0 (minimal debug) — development:**
 ```
-[SmartLink] INF  Initializing SmartLink SDK...
-[SmartLink] INF  Launch: first_install
-[SmartLink] INF  SDK ready
-[SmartLink] INF  First launch — checking deferred link...
-[SmartLink] INF  ✅ DEFERRED LINK MATCHED! Score: 100
-[SmartLink] INF  Deferred link matched: abc123
+[SmartLink] INFO  Initializing SmartLink SDK...
+[SmartLink] INFO  Launch: first_install
+[SmartLink] INFO  SDK ready
+[SmartLink] INFO  First launch — checking deferred link...
+[SmartLink] INFO  Collecting fingerprint...
+[SmartLink] INFO  ✅ Fingerprint collected
+[SmartLink] INFO  ✅ DEFERRED LINK MATCHED! Score: 100
+[SmartLink] INFO  Deferred link matched: abc123
 ```
 
-**logLevel: -1 (detailed debug) — deep debugging:**
+**Direct deep link (app already installed):**
 ```
-[SmartLink] VRB  Collecting full device info...
-[SmartLink] DAT  ┌ fingerprint
-               │ screenWidth: 1080.0
-               │ screenHeight: 2400.0
-               │ locale: en-US
-               │ timezone: +05:30
-               └
-[SmartLink] HTTP GET https://smartlink-coral.vercel.app/api/v1/deferred/match → 200
-[SmartLink] TIME fingerprint_collection: 42ms
-[SmartLink] INF  ✅ DEFERRED LINK MATCHED! Score: 100
+[SmartLink] INFO  Deep link received
+[SmartLink] INFO  ✅ Deep link resolved
 ```
+
+**logLevel: -1 (verbose) — deep debugging:**
+Same as above, plus extra detail on errors and internal steps.
 
 **logLevel: 1 (release) — production:**
 No output.

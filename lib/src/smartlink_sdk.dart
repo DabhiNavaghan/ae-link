@@ -88,15 +88,7 @@ class SmartLinkSdk {
 
       if (!_validated) {
         SmartLinkLogger.error(
-          '══════════════════════════════════════════════════════════\n'
-          '  SmartLink: Invalid API key!\n'
-          '  \n'
-          '  Get your API key from the SmartLink dashboard:\n'
-          '  ${config.apiBaseUrl}/dashboard/settings\n'
-          '  \n'
-          '  Pass it when creating SmartLink:\n'
-          '  SmartLink(apiKey: "YOUR_KEY", ...)\n'
-          '══════════════════════════════════════════════════════════',
+          'Invalid API key! Get your key from the SmartLink dashboard → Settings.',
         );
         // Don't proceed with deep link setup — key is invalid
         return;
@@ -105,11 +97,16 @@ class SmartLinkSdk {
       // ── STEP 2: Setup deep link handler ──
       if (config.autoHandleDeepLinks) {
         sdk._deepLinkHandler.setConfig(config);
-        await sdk._deepLinkHandler.initialize();
+
+        // Subscribe BEFORE initialize so we don't miss the initial link.
+        // Broadcast streams don't buffer — if we subscribe after initialize(),
+        // the cold-start deep link is emitted and lost before anyone listens.
         sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
           sdk._lastDeepLink = deepLinkData;
           sdk._deepLinkStreamController.add(deepLinkData);
         });
+
+        await sdk._deepLinkHandler.initialize();
       }
 
       SmartLinkLogger.info('SDK ready');
@@ -177,8 +174,7 @@ class SmartLinkSdk {
 
           if (result['appValid'] == false && result['appWarning'] != null) {
             SmartLinkLogger.warning(
-              'App mismatch: ${result['appWarning']}\n'
-              'Register your app at: ${_config.apiBaseUrl}/dashboard/apps',
+              'App mismatch: ${result['appWarning']}',
             );
           }
         }
@@ -202,7 +198,7 @@ class SmartLinkSdk {
     } catch (e) {
       // Network error — don't block the SDK
       _validated = true;
-      SmartLinkLogger.debug('SDK init failed: $e — continuing offline');
+      SmartLinkLogger.debug('SDK init failed — continuing offline');
     }
   }
 

@@ -33,13 +33,13 @@ class DeepLinkHandler {
     try {
       final initialUri = await _getInitialLink();
       if (initialUri != null) {
-        SmartLinkLogger.info('App opened via deep link: $initialUri');
+        SmartLinkLogger.info('App opened via deep link');
         await _handleDeepLink(initialUri);
       }
 
       _deepLinkSubscription = _appLinks.uriLinkStream.listen(
         (uri) async {
-          SmartLinkLogger.info('Deep link received: $uri');
+          SmartLinkLogger.info('Deep link received');
           await _handleDeepLink(uri);
         },
         onError: (err) {
@@ -86,7 +86,7 @@ class DeepLinkHandler {
           // Merge URL query params — they override stored values
           final merged = _mergeQueryParams(resolved, uri.queryParameters);
           _deepLinkController.add(merged);
-          SmartLinkLogger.info('Deep link resolved: ${merged.eventId ?? merged.destinationUrl}');
+          SmartLinkLogger.info('✅ Deep link resolved');
           return;
         }
       }
@@ -166,8 +166,7 @@ class DeepLinkHandler {
           );
         }
       } else {
-        SmartLinkLogger.verbose('Failed to resolve short code: ${response.statusCode}');
-        SmartLinkLogger.http('GET', url.toString(), status: response.statusCode, body: response.body);
+        SmartLinkLogger.verbose('Short code resolve failed: ${response.statusCode}');
       }
     } catch (e) {
       SmartLinkLogger.verbose('Short code resolve failed: $e');

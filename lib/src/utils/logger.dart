@@ -1,7 +1,7 @@
 /// Log level for SmartLink SDK
 ///
-/// -1 = detailed debug (structured output for deep debugging)
-///  0 = minimal debug (key lifecycle events only)
+/// -1 = verbose (extra detail for deep debugging)
+///  0 = minimal debug (actions + results only)
 ///  1 = release / silent (no logs)
 class SmartLinkLogger {
   static int _logLevel = 1;
@@ -60,7 +60,7 @@ class SmartLinkLogger {
     _print('DBG', message);
   }
 
-  // ── Level -1: detailed / verbose ──
+  // ── Level -1: verbose ──
 
   /// Log verbose detail — only visible at level -1
   static void verbose(String message) {
@@ -68,34 +68,10 @@ class SmartLinkLogger {
     _print('VRB', message);
   }
 
-  /// Log a structured data block — only visible at level -1
-  static void data(String label, Map<String, dynamic> fields) {
-    if (_logLevel >= 0) return;
-    _print('DAT', '┌── $label');
-    fields.forEach((key, value) {
-      _print('DAT', '│ $key: $value');
-    });
-    _print('DAT', '└──');
-  }
-
-  /// Log HTTP request/response — only visible at level -1
-  static void http(String method, String url, {int? status, String? body}) {
-    if (_logLevel >= 0) return;
-    final arrow = status != null ? '← $status' : '→';
-    _print('HTTP', '$arrow $method $url');
-    if (body != null && body.length <= 500) _print('HTTP', '  $body');
-  }
-
-  /// Log timing — only visible at level -1
-  static void timing(String operation, Duration duration) {
-    if (_logLevel >= 0) return;
-    _print('TIME', '$operation: ${duration.inMilliseconds}ms');
-  }
-
   // ── Internal ──
 
   static void _print(String level, String message) {
     // ignore: avoid_print
-    print('[$_tag][$level] $message');
+    print('[$_tag] $level  $message');
   }
 }

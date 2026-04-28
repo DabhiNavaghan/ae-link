@@ -42,8 +42,6 @@ class DeferredLinkService {
             },
           );
 
-      SmartLinkLogger.http('POST', url.toString(), status: response.statusCode, body: response.body);
-
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -51,38 +49,18 @@ class DeferredLinkService {
           final data = jsonResponse['data'] as Map<String, dynamic>;
 
           if (data['matched'] != true) {
-            if (data['debug'] != null) {
-              final debug = data['debug'] as Map<String, dynamic>;
-              SmartLinkLogger.data('match_debug', {
-                'appIp': debug['appFingerprint']?['ipAddress'],
-                'appScreen': debug['appFingerprint']?['screen'],
-                'appLanguage': debug['appFingerprint']?['language'],
-                'appTimezone': debug['appFingerprint']?['timezone'],
-                'appTzOffset': debug['appFingerprint']?['timezoneOffset'],
-                'threshold': debug['matchThreshold'],
-                'message': debug['message'],
-              });
-            }
             SmartLinkLogger.info('No deferred link matched (organic install)');
             return null;
           }
 
-          SmartLinkLogger.info('Deferred link matched, score: ${data['matchScore']}');
-          SmartLinkLogger.data('match_result', {
-            'score': data['matchScore'],
-            'deferredLinkId': data['deferredLinkId'],
-            'linkId': data['linkId'],
-            if (data['matchDetails'] != null) 'details': data['matchDetails'],
-          });
+          SmartLinkLogger.info('✅ DEFERRED LINK MATCHED! Score: ${data['matchScore']}');
           return _parseDeepLinkResponse(data);
         }
       } else if (response.statusCode == 401) {
         SmartLinkLogger.warning('Unauthorized — check your API key');
         return null;
       } else {
-        SmartLinkLogger.warning(
-          'Failed to match fingerprint: ${response.statusCode} ${response.body}',
-        );
+        SmartLinkLogger.warning('Deferred match failed: ${response.statusCode}');
         return null;
       }
     } catch (e, stackTrace) {
@@ -95,15 +73,13 @@ class DeferredLinkService {
   /// Confirm that a deferred link was shown to the user
   Future<bool> confirmDeepLink(String deferredLinkId) async {
     try {
-      SmartLinkLogger.info('Confirming deferred link: $deferredLinkId');
+      SmartLinkLogger.info('Confirming deferred link...');
 
       final url = Uri.parse('${config.apiBaseUrl}/api/v1/deferred/confirm');
       final body = jsonEncode({
         'deferredLinkId': deferredLinkId,
         'deviceId': config.tenantApiKey.hashCode.toString(),
       });
-
-      SmartLinkLogger.http('POST', url.toString());
 
       final response = await _httpClient
           .post(
@@ -120,19 +96,15 @@ class DeferredLinkService {
             },
           );
 
-      SmartLinkLogger.http('POST', url.toString(), status: response.statusCode, body: response.body);
-
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
         final success = jsonResponse['success'] as bool? ?? false;
         if (success) {
-          SmartLinkLogger.info('Deferred link confirmed successfully');
+          SmartLinkLogger.info('✅ Deferred link confirmed');
         }
         return success;
       } else {
-        SmartLinkLogger.warning(
-          'Failed to confirm deferred link: ${response.statusCode}',
-        );
+        SmartLinkLogger.warning('Deferred link confirm failed');
         return false;
       }
     } catch (e, stackTrace) {
