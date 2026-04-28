@@ -56,15 +56,15 @@ class DeferredLinkService {
           if (data['matched'] != true) {
             // Log debug info if available
             if (data['debug'] != null) {
-              SmartLinkLogger.info('🔍 MATCH DEBUG INFO:');
-              final debug = data['debug'] as Map<String, dynamic>;
-              SmartLinkLogger.info('  App IP: ${debug['appFingerprint']?['ipAddress']}');
-              SmartLinkLogger.info('  App Screen: ${debug['appFingerprint']?['screen']}');
-              SmartLinkLogger.info('  App Language: ${debug['appFingerprint']?['language']}');
-              SmartLinkLogger.info('  App Timezone: ${debug['appFingerprint']?['timezone']}');
-              SmartLinkLogger.info('  App TZ Offset: ${debug['appFingerprint']?['timezoneOffset']}');
-              SmartLinkLogger.info('  Threshold: ${debug['matchThreshold']}');
-              SmartLinkLogger.info('  Message: ${debug['message']}');
+              // SmartLinkLogger.info('🔍 MATCH DEBUG INFO:');
+              // final debug = data['debug'] as Map<String, dynamic>;
+              // SmartLinkLogger.info('  App IP: ${debug['appFingerprint']?['ipAddress']}');
+              // SmartLinkLogger.info('  App Screen: ${debug['appFingerprint']?['screen']}');
+              // SmartLinkLogger.info('  App Language: ${debug['appFingerprint']?['language']}');
+              // SmartLinkLogger.info('  App Timezone: ${debug['appFingerprint']?['timezone']}');
+              // SmartLinkLogger.info('  App TZ Offset: ${debug['appFingerprint']?['timezoneOffset']}');
+              // SmartLinkLogger.info('  Threshold: ${debug['matchThreshold']}');
+              // SmartLinkLogger.info('  Message: ${debug['message']}');
             }
             SmartLinkLogger.info('❌ No deferred link matched (organic install)');
             return null;
