@@ -27,6 +27,7 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// ```dart
 /// final smartLink = SmartLink(
 ///   apiKey: 'your-api-key',
+///   apiBaseUrl: 'https://smartlink.apps.allevents.app',
 ///   onDeepLink: (data) {
 ///     // App was already installed — user clicked a link
 ///     // Navigate based on data.eventId, data.action, etc.
@@ -56,32 +57,11 @@ class SmartLink {
   /// Called when an error occurs (optional)
   final ErrorCallback? onError;
 
-  /// Enable debug logging (backward compatible, use logLevel instead)
-  final bool debug;
-
   /// Log level: -1 = detailed debug, 0 = minimal debug, 1 = release/silent
   final int? logLevel;
 
   /// API request timeout in seconds
   final int timeoutSeconds;
-
-  /// Auto-listen for Universal Links / App Links
-  final bool autoHandleDeepLinks;
-
-  /// Set to true when adding SmartLink to an app that already has users.
-  /// This prevents existing users from being treated as new installs
-  /// and skips deferred link checking for them.
-  ///
-  /// Example: set based on whether the user is logged in:
-  /// ```dart
-  /// SmartLink(
-  ///   apiKey: 'KEY',
-  ///   isExistingUser: authService.isLoggedIn,
-  ///   onDeepLink: (data) { ... },
-  ///   onDeferredDeepLink: (data) { ... },
-  /// )
-  /// ```
-  final bool isExistingUser;
 
   /// Whether to handle external deep links (links not from the SmartLink domain).
   ///
@@ -98,11 +78,8 @@ class SmartLink {
     this.onDeepLink,
     this.onDeferredDeepLink,
     this.onError,
-    this.debug = false,
     this.logLevel,
     this.timeoutSeconds = 30,
-    this.autoHandleDeepLinks = true,
-    this.isExistingUser = false,
     this.handleExternalDeepLinks = false,
   });
 
@@ -141,11 +118,8 @@ class SmartLink {
         SmartLinkConfig(
           apiBaseUrl: apiBaseUrl,
           tenantApiKey: apiKey,
-          debug: debug,
           logLevel: logLevel,
           requestTimeoutSeconds: timeoutSeconds,
-          autoHandleDeepLinks: autoHandleDeepLinks,
-          isExistingUser: isExistingUser,
           handleExternalDeepLinks: handleExternalDeepLinks,
         ),
       );

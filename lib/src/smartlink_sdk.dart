@@ -72,18 +72,6 @@ class SmartLinkSdk {
       sdk._deferredLinkService = DeferredLinkService(config: config);
       sdk._deepLinkHandler = DeepLinkHandler();
 
-      // If adding SDK to an existing app with existing users,
-      // mark first launch as done so we don't try deferred linking for them
-      if (config.isExistingUser) {
-        final prefs = sdk._storageService;
-        // Check raw value — isFirstLaunch() would mark it as done
-        final alreadyMarked = prefs.getDeviceId() != null;
-        if (!alreadyMarked) {
-          await prefs.markFirstLaunchComplete();
-          SmartLinkLogger.info('Existing user — will skip deferred link check');
-        }
-      }
-
       // ── STEP 0.5: Capture launch URI before init ──
       // If the app was opened via a deep link, grab it now so we can
       // send the source/UTM params with the init call.
@@ -107,19 +95,17 @@ class SmartLinkSdk {
       }
 
       // ── STEP 2: Setup deep link handler ──
-      if (config.autoHandleDeepLinks) {
-        sdk._deepLinkHandler.setConfig(config);
+      sdk._deepLinkHandler.setConfig(config);
 
-        // Subscribe BEFORE initialize so we don't miss the initial link.
-        // Broadcast streams don't buffer — if we subscribe after initialize(),
-        // the cold-start deep link is emitted and lost before anyone listens.
-        sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
-          sdk._lastDeepLink = deepLinkData;
-          sdk._deepLinkStreamController.add(deepLinkData);
-        });
+      // Subscribe BEFORE initialize so we don't miss the initial link.
+      // Broadcast streams don't buffer — if we subscribe after initialize(),
+      // the cold-start deep link is emitted and lost before anyone listens.
+      sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
+        sdk._lastDeepLink = deepLinkData;
+        sdk._deepLinkStreamController.add(deepLinkData);
+      });
 
-        await sdk._deepLinkHandler.initialize();
-      }
+      await sdk._deepLinkHandler.initialize();
 
       SmartLinkLogger.info('SDK ready');
     } catch (e, stackTrace) {
@@ -185,8 +171,7 @@ class SmartLinkSdk {
         'deviceManufacturer': await DeviceInfoHelper.getDeviceManufacturer(),
         'locale': DeviceInfoHelper.getLocale(),
         'timezone': DeviceInfoHelper.getTimezone(),
-        'isFirstLaunch': isFirstLaunch && !_config.isExistingUser,
-        'isExistingUser': _config.isExistingUser,
+        'isFirstLaunch': isFirstLaunch,
         // Source tracking — which link/campaign opened the app
         if (launchSource != null) 'launchSource': launchSource,
         if (launchMedium != null) 'launchMedium': launchMedium,
