@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:app_links/app_links.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'config.dart';
@@ -83,8 +84,19 @@ class SmartLinkSdk {
         }
       }
 
+      // ── STEP 0.5: Capture launch URI before init ──
+      // If the app was opened via a deep link, grab it now so we can
+      // send the source/UTM params with the init call.
+      Uri? launchUri;
+      try {
+        final appLinks = AppLinks();
+        launchUri = await appLinks.getInitialLink();
+      } catch (_) {
+        // Silently ignore — launch URI is optional
+      }
+
       // ── STEP 1: Validate API key + register launch (BLOCKING) ──
-      await _validateAndRegister();
+      await _validateAndRegister(launchUri: launchUri);
 
       if (!_validated) {
         SmartLinkLogger.error(
@@ -118,7 +130,11 @@ class SmartLinkSdk {
 
   /// Validate API key and register this launch with the backend.
   /// This is BLOCKING — if the key is invalid, we stop everything.
-  static Future<void> _validateAndRegister() async {
+  ///
+  /// [launchUri] is the deep link URI that opened the app (if any).
+  /// Source/UTM params are extracted and sent so the backend can track
+  /// which link/campaign brought the user back on every open.
+  static Future<void> _validateAndRegister({Uri? launchUri}) async {
     final sdk = _sdkInstance;
 
     try {
@@ -140,6 +156,24 @@ class SmartLinkSdk {
         buildNumber = info.buildNumber;
       } catch (_) {}
 
+      // Extract source params from launch URI — only for SmartLink domain URLs.
+      // External deep links are ignored for attribution tracking.
+      String? launchSource;
+      String? launchMedium;
+      String? launchCampaign;
+      String? launchLinkId;
+      if (launchUri != null && _isSmartLinkDomain(launchUri)) {
+        final q = launchUri.queryParameters;
+        launchSource = q['utm_source'] ?? q['utmSource'];
+        launchMedium = q['utm_medium'] ?? q['utmMedium'];
+        launchCampaign = q['utm_campaign'] ?? q['utmCampaign'];
+        // Extract the short code as linkId from the path
+        final segments = launchUri.pathSegments.where((s) => s.isNotEmpty).toList();
+        if (segments.length == 1 && segments[0].length >= 4) {
+          launchLinkId = segments[0];
+        }
+      }
+
       final body = jsonEncode({
         'deviceId': deviceId,
         'platform': DeviceInfoHelper.getOsName(),
@@ -153,6 +187,12 @@ class SmartLinkSdk {
         'timezone': DeviceInfoHelper.getTimezone(),
         'isFirstLaunch': isFirstLaunch && !_config.isExistingUser,
         'isExistingUser': _config.isExistingUser,
+        // Source tracking — which link/campaign opened the app
+        if (launchSource != null) 'launchSource': launchSource,
+        if (launchMedium != null) 'launchMedium': launchMedium,
+        if (launchCampaign != null) 'launchCampaign': launchCampaign,
+        if (launchLinkId != null) 'launchLinkId': launchLinkId,
+        if (launchUri != null) 'launchUrl': launchUri.toString(),
       });
 
       final response = await http.Client()
@@ -308,6 +348,12 @@ class SmartLinkSdk {
     await sdk._deepLinkStreamController.close();
     sdk._deferredLinkService.dispose();
     _instance = null;
+  }
+
+  /// Check if a URI belongs to the SmartLink domain (from apiBaseUrl config).
+  static bool _isSmartLinkDomain(Uri uri) {
+    final smartLinkHost = Uri.parse(_config.apiBaseUrl).host.toLowerCase();
+    return uri.host.toLowerCase() == smartLinkHost;
   }
 
   /// Force check for deferred deep link (ignores first-launch check)

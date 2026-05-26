@@ -83,6 +83,12 @@ class SmartLink {
   /// ```
   final bool isExistingUser;
 
+  /// Whether to handle external deep links (links not from the SmartLink domain).
+  ///
+  /// - `false` (default): Only dashboard-created links trigger callbacks.
+  /// - `true`: All deep links (including external) are passed to onDeepLink.
+  final bool handleExternalDeepLinks;
+
   StreamSubscription<DeepLinkData>? _deepLinkSubscription;
   bool _initialized = false;
 
@@ -97,6 +103,7 @@ class SmartLink {
     this.timeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
     this.isExistingUser = false,
+    this.handleExternalDeepLinks = false,
   });
 
   /// Initialize the SDK, check for deferred deep links, and start listening.
@@ -139,6 +146,7 @@ class SmartLink {
           requestTimeoutSeconds: timeoutSeconds,
           autoHandleDeepLinks: autoHandleDeepLinks,
           isExistingUser: isExistingUser,
+          handleExternalDeepLinks: handleExternalDeepLinks,
         ),
       );
 

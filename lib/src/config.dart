@@ -25,11 +25,20 @@ class SmartLinkConfig {
   /// Set to true if you're adding SmartLink SDK to an existing app
   /// that already has users. This tells the SDK to skip deferred link
   /// checking for existing users and correctly reports them as
-  /// 'return_user' instead of 'first_install'.
+  /// 'open' instead of 'first_install'.
   ///
   /// Tip: set this based on whether the user is already logged in
   /// or has existing app data.
   final bool isExistingUser;
+
+  /// Whether to handle external deep links (links not from the SmartLink domain).
+  ///
+  /// - `false` (default): Only links from your SmartLink domain
+  ///   (apiBaseUrl) trigger onDeepLink / onDeferredDeepLink callbacks.
+  ///   External links are silently ignored by the SDK.
+  /// - `true`: All deep links are processed, including external ones.
+  ///   External links are parsed from the URL and delivered via onDeepLink.
+  final bool handleExternalDeepLinks;
 
   /// Custom headers to include in all API requests
   final Map<String, String>? customHeaders;
@@ -51,6 +60,7 @@ class SmartLinkConfig {
     this.requestTimeoutSeconds = 30,
     this.autoHandleDeepLinks = true,
     this.isExistingUser = false,
+    this.handleExternalDeepLinks = false,
     this.customHeaders,
   }) : apiBaseUrl = apiBaseUrl.endsWith('/')
            ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)

@@ -72,35 +72,57 @@ class DeepLinkHandler {
 
   /// Handle incoming deep link URI
   ///
-  /// If the URL is a SmartLink short code URL (e.g., smartlink.vercel.app/xGJEQJR),
-  /// resolve it via the API to get full link data (params, destination, etc.)
+  /// Only fires onDeepLink callback for links from the SmartLink domain
+  /// (created via the dashboard). External links are logged but ignored.
   Future<void> _handleDeepLink(Uri uri) async {
     try {
-      // Extract short code from URL path
-      final shortCode = _extractShortCode(uri);
+      final isSmartLink = _isSmartLinkUrl(uri);
 
-      if (shortCode != null && _config != null) {
-        // Resolve short code via API, then merge URL query params
-        final resolved = await _resolveShortCode(shortCode);
-        if (resolved != null) {
-          // Merge URL query params — they override stored values
-          final merged = _mergeQueryParams(resolved, uri.queryParameters);
-          _deepLinkController.add(merged);
-          SmartLinkLogger.info('✅ Deep link resolved');
-          _logDeepLinkData(merged);
-          return;
+      if (isSmartLink) {
+        // ── SmartLink domain URL → resolve short code via API ──
+        final shortCode = _extractShortCode(uri);
+
+        if (shortCode != null && _config != null) {
+          final resolved = await _resolveShortCode(shortCode);
+          if (resolved != null) {
+            final merged = _mergeQueryParams(resolved, uri.queryParameters);
+            _deepLinkController.add(merged);
+            SmartLinkLogger.info('✅ Deep link resolved');
+            _logDeepLinkData(merged);
+            return;
+          }
         }
-      }
 
-      // Fallback: parse whatever we can from the URL directly
-      final deepLinkData = DeepLinkData.fromUrl(uri.toString());
-      _deepLinkController.add(deepLinkData);
-      SmartLinkLogger.info('Deep link parsed from URL');
-      _logDeepLinkData(deepLinkData);
+        SmartLinkLogger.debug('SmartLink URL but short code not found: $uri');
+      } else if (_config?.handleExternalDeepLinks == true) {
+        // ── External link + flag enabled → parse and pass through ──
+        final deepLinkData = DeepLinkData.fromUrl(uri.toString());
+        _deepLinkController.add(deepLinkData);
+        SmartLinkLogger.info('External deep link passed through: ${uri.host}');
+        _logDeepLinkData(deepLinkData);
+      } else {
+        // ── External link + flag disabled → ignore ──
+        SmartLinkLogger.debug(
+          'External link ignored (handleExternalDeepLinks: false): ${uri.host}',
+        );
+      }
     } catch (e, stackTrace) {
       SmartLinkLogger.errorWithStackTrace(
           'Error processing deep link', e, stackTrace);
     }
+  }
+
+  /// Check if a URI belongs to the SmartLink domain (from apiBaseUrl config).
+  /// Only links from this domain were created via the dashboard.
+  bool _isSmartLinkUrl(Uri uri) {
+    if (_config == null) return false;
+
+    final smartLinkHost =
+        Uri.parse(_config!.apiBaseUrl).host.toLowerCase();
+    final linkHost = uri.host.toLowerCase();
+
+    // Exact match (e.g., smartlink.apps.allevents.app)
+    return linkHost == smartLinkHost;
   }
 
   /// Extract short code from a SmartLink URL
@@ -262,7 +284,8 @@ class DeepLinkHandler {
     );
   }
 
-  /// Manually process a deep link URL
+  /// Manually process a deep link URL.
+  /// Only SmartLink domain URLs will fire callbacks.
   void processDeepLink(String url) {
     try {
       final uri = Uri.parse(url);
