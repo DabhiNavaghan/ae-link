@@ -1,16 +1,16 @@
+import 'package:flutter/foundation.dart';
+
 /// Log level for SmartLink SDK
 ///
 /// -1 = verbose (extra detail for deep debugging)
 ///  0 = minimal debug (actions + results only)
 ///  1 = release / silent (no logs)
 ///
-/// NOTE: All logs are suppressed in release builds regardless of logLevel.
+/// NOTE: All logs are completely suppressed in release builds
+/// regardless of logLevel. Zero print() calls in production.
 class SmartLinkLogger {
   static int _logLevel = 1;
   static const String _tag = 'SmartLink';
-
-  /// Whether logging is enabled (false in release mode, always)
-  static bool get _enabled => !const bool.fromEnvironment('dart.vm.product');
 
   /// Initialize with log level
   static void init({int logLevel = 1}) {
@@ -22,31 +22,27 @@ class SmartLinkLogger {
 
   // ── Level 0: minimal debug (key events) ──
 
-  /// Log info — visible at level 0 and -1 (debug builds only)
   static void info(String message) {
-    if (!_enabled || _logLevel > 0) return;
+    if (kReleaseMode || _logLevel > 0) return;
     _print('INFO', message);
   }
 
-  /// Log warning — visible at level 0 and -1 (debug builds only)
   static void warning(String message, [dynamic error, StackTrace? stackTrace]) {
-    if (!_enabled || _logLevel > 0) return;
+    if (kReleaseMode || _logLevel > 0) return;
     _print('WARN', message);
     if (error != null) _print('WARN', '  ↳ $error');
     if (stackTrace != null && _logLevel < 0) _print('WARN', '$stackTrace');
   }
 
-  /// Log error — visible at level 0 and -1 (debug builds only)
   static void error(String message, [dynamic error, StackTrace? stackTrace]) {
-    if (!_enabled || _logLevel > 0) return;
+    if (kReleaseMode || _logLevel > 0) return;
     _print('ERR', message);
     if (error != null) _print('ERR', '  ↳ $error');
     if (stackTrace != null && _logLevel < 0) _print('ERR', '$stackTrace');
   }
 
-  /// Log error with stack trace — visible at level 0 and -1 (debug builds only)
   static void errorWithStackTrace(String message, dynamic error, StackTrace stackTrace) {
-    if (!_enabled || _logLevel > 0) return;
+    if (kReleaseMode || _logLevel > 0) return;
     _print('ERR', message);
     _print('ERR', '  ↳ $error');
     if (_logLevel < 0) _print('ERR', '$stackTrace');
@@ -54,23 +50,20 @@ class SmartLinkLogger {
 
   // ── Level 0: basic debug ──
 
-  /// Log debug — visible at level 0 and -1 (debug builds only)
   static void debug(String message) {
-    if (!_enabled || _logLevel > 0) return;
+    if (kReleaseMode || _logLevel > 0) return;
     _print('DBG', message);
   }
 
   // ── Level -1: verbose ──
 
-  /// Log verbose detail — only visible at level -1 (debug builds only)
   static void verbose(String message) {
-    if (!_enabled || _logLevel >= 0) return;
+    if (kReleaseMode || _logLevel >= 0) return;
     _print('VRB', message);
   }
 
-  /// Log a structured data block — only visible at level -1 (debug builds only)
   static void data(String label, Map<String, dynamic> fields) {
-    if (!_enabled || _logLevel >= 0) return;
+    if (kReleaseMode || _logLevel >= 0) return;
     final entries = fields.entries
         .where((e) => e.value != null)
         .map((e) => '${e.key}: ${e.value}')
