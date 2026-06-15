@@ -83,7 +83,8 @@ class DeepLinkHandler {
         final shortCode = _extractShortCode(uri);
 
         if (shortCode != null && _config != null) {
-          final resolved = await _resolveShortCode(shortCode);
+          // Forward query params to resolve API for backend tracking
+          final resolved = await _resolveShortCode(shortCode, uri.queryParameters);
           if (resolved != null) {
             final merged = _mergeQueryParams(resolved, uri.queryParameters);
             _deepLinkController.add(merged);
@@ -145,11 +146,15 @@ class DeepLinkHandler {
     return null;
   }
 
-  /// Call backend API to resolve short code into full link data
-  Future<DeepLinkData?> _resolveShortCode(String shortCode) async {
+  /// Call backend API to resolve short code into full link data.
+  /// Forwards all query params from the original URL so the backend
+  /// can track them (deepLink, ref, utm_*, etc.) in click metadata.
+  Future<DeepLinkData?> _resolveShortCode(String shortCode, [Map<String, String>? queryParams]) async {
     try {
-      final url = Uri.parse(
-          '${_config!.apiBaseUrl}/api/v1/links/resolve?shortCode=$shortCode');
+      final params = <String, String>{'shortCode': shortCode};
+      if (queryParams != null) params.addAll(queryParams);
+      final url = Uri.parse('${_config!.apiBaseUrl}/api/v1/links/resolve')
+          .replace(queryParameters: params);
 
       final response = await http.Client()
           .get(url, headers: _config!.getHeaders())
@@ -242,6 +247,7 @@ class DeepLinkHandler {
       'utm_content', 'utmContent', 'event_id', 'eventId',
       'action', 'user_email', 'userEmail', 'user_id', 'userId',
       'coupon_code', 'couponCode', 'referral_code', 'referralCode',
+      'deepLink', 'deep_link',
     };
     final urlCustom = <String, dynamic>{};
     for (final e in query.entries) {
@@ -256,12 +262,19 @@ class DeepLinkHandler {
       ...urlCustom,
     };
 
+    // deepLink query param → becomes destinationUrl if link has none
+    final deepLinkUrl = query['deepLink'] ?? query['deep_link'];
+    final effectiveDestination =
+        (data.destinationUrl == null || data.destinationUrl!.isEmpty) && deepLinkUrl != null
+            ? deepLinkUrl
+            : data.destinationUrl;
+
     return DeepLinkData(
       linkId: data.linkId,
       deferredLinkId: data.deferredLinkId,
       eventId: pick(data.eventId, ['event_id', 'eventId']),
       action: pick(data.action, ['action']),
-      destinationUrl: data.destinationUrl,
+      destinationUrl: effectiveDestination,
       campaignId: data.campaignId,
       campaignName: data.campaignName,
       campaign: data.campaign,
