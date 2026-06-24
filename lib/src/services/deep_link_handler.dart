@@ -92,6 +92,28 @@ class DeepLinkHandler {
             _logDeepLinkData(merged);
             return;
           }
+
+          // Resolve API failed (network error, auth issue, etc.).
+          // If the URL carries a deepLink query param, use it directly so
+          // the host app still receives the destination instead of silently
+          // dropping the event.
+          final fallbackDest = uri.queryParameters['deepLink'] ??
+              uri.queryParameters['deep_link'] ??
+              uri.queryParameters['deeplink'];
+          if (fallbackDest != null && fallbackDest.isNotEmpty) {
+            SmartLinkLogger.warning(
+              'Resolve API failed — using deepLink param as fallback destination',
+            );
+            final fallback = DeepLinkData(
+              destinationUrl: fallbackDest,
+              rawUrl: uri.toString(),
+              isDeferred: false,
+              clickedAt: DateTime.now(),
+            );
+            _deepLinkController.add(fallback);
+            _logDeepLinkData(fallback);
+            return;
+          }
         }
 
         SmartLinkLogger.debug('SmartLink URL but short code not found: $uri');
