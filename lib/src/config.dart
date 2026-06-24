@@ -1,5 +1,5 @@
 /// Default SmartLink API base URL (no trailing slash)
-const String kSmartLinkDefaultBaseUrl = 'https://smartlink-coral.vercel.app';
+const String kSmartLinkDefaultBaseUrl = 'https://smartlink.apps.allevents.app';
 
 /// Configuration for the SmartLink SDK
 class SmartLinkConfig {

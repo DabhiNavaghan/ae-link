@@ -247,7 +247,7 @@ class DeepLinkHandler {
       'utm_content', 'utmContent', 'event_id', 'eventId',
       'action', 'user_email', 'userEmail', 'user_id', 'userId',
       'coupon_code', 'couponCode', 'referral_code', 'referralCode',
-      'deepLink', 'deep_link',
+      'deepLink', 'deep_link', 'deeplink',
     };
     final urlCustom = <String, dynamic>{};
     for (final e in query.entries) {
@@ -262,12 +262,9 @@ class DeepLinkHandler {
       ...urlCustom,
     };
 
-    // deepLink query param → becomes destinationUrl if link has none
-    final deepLinkUrl = query['deepLink'] ?? query['deep_link'];
-    final effectiveDestination =
-        (data.destinationUrl == null || data.destinationUrl!.isEmpty) && deepLinkUrl != null
-            ? deepLinkUrl
-            : data.destinationUrl;
+
+    final deepLinkUrl = query['deepLink'] ?? query['deep_link'] ?? query['deeplink'];
+    final effectiveDestination = deepLinkUrl ?? data.destinationUrl;
 
     return DeepLinkData(
       linkId: data.linkId,
