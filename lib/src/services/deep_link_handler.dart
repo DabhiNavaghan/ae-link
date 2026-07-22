@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 import '../models/deep_link_data.dart';
 import '../models/link_params.dart';
+import '../utils/device_info.dart';
 import '../utils/logger.dart';
 
 /// Service for handling incoming deep links via Universal Links / App Links
@@ -175,6 +176,13 @@ class DeepLinkHandler {
     try {
       final params = <String, String>{'shortCode': shortCode};
       if (queryParams != null) params.addAll(queryParams);
+      // Forward the real device platform. The SDK's HTTP User-Agent ("Dart/x")
+      // does not reveal iOS vs Android, so the backend can only label the click's
+      // OS accurately if we send it explicitly here.
+      final osName = DeviceInfoHelper.getOsName();
+      if (osName == 'ios' || osName == 'android') {
+        params['platform'] = osName;
+      }
       final url = Uri.parse('${_config!.apiBaseUrl}/api/v1/links/resolve')
           .replace(queryParameters: params);
 
