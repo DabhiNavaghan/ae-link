@@ -150,7 +150,7 @@ class DeepLinkHandler {
   }
 
   /// Extract short code from a SmartLink URL
-  /// e.g., https://smartlink.vercel.app/xGJEQJR → xGJEQJR
+  /// e.g., https://smartlink.apps.allevents.app/xGJEQJR → xGJEQJR
   String? _extractShortCode(Uri uri) {
     final path = uri.path;
     // Short codes are single path segment, 5-12 alphanumeric chars

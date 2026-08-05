@@ -10,7 +10,7 @@ It also tracks what people do *after* they install — see
 
 **Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/ae-link-backend)
 **SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/ae-link)
-**Dashboard:** [smartlink-coral.vercel.app](https://smartlink-coral.vercel.app)
+**Dashboard:** [smartlink.apps.allevents.app](https://smartlink.apps.allevents.app)
 
 ## Setup
 
@@ -59,7 +59,7 @@ Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="https" android:host="smartlink-coral.vercel.app" />
+        <data android:scheme="https" android:host="smartlink.apps.allevents.app" />
     </intent-filter>
 </activity>
 ```
@@ -71,7 +71,7 @@ Replace the host with your deployment domain if different.
 In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
 
 ```
-applinks:smartlink-coral.vercel.app
+applinks:smartlink.apps.allevents.app
 ```
 
 ### 5. Initialize the SDK
@@ -87,7 +87,7 @@ late SmartLink smartLink;
 Future<DeepLinkData?> initSmartLink({bool isExistingUser = false}) async {
   smartLink = SmartLink(
     apiKey: 'YOUR_API_KEY',       // From dashboard Settings
-    apiBaseUrl: 'https://smartlink-coral.vercel.app',
+    apiBaseUrl: 'https://smartlink.apps.allevents.app',
     logLevel: 0,                   // -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
     isExistingUser: isExistingUser,
 
@@ -126,7 +126,7 @@ void main() async {
 
 ### `onDeepLink` — Direct Deep Link
 - App is **already installed** on the device
-- User clicks a SmartLink URL (e.g., `https://smartlink-coral.vercel.app/xGJEQJR`)
+- User clicks a SmartLink URL (e.g., `https://smartlink.apps.allevents.app/xGJEQJR`)
 - Android/iOS opens the app directly via App Links / Universal Links
 - `onDeepLink` fires with the link data
 
