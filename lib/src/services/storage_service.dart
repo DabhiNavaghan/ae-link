@@ -8,6 +8,14 @@ class StorageService {
   static const String _keyLastDeferredLink = 'smartlink_last_deferred_link';
   static const String _keyLastDeepLink = 'smartlink_last_deep_link';
 
+  // ── Event tracking ──
+  static const String _keyEventQueue = 'smartlink_event_queue';
+  static const String _keyUserId = 'smartlink_user_id';
+  static const String _keySessionId = 'smartlink_session_id';
+  static const String _keySessionLastActive = 'smartlink_session_last_active';
+  static const String _keyPendingIdentify = 'smartlink_pending_identify';
+  static const String _keyDroppedEventCount = 'smartlink_dropped_events';
+
   late SharedPreferences _prefs;
 
   /// Initialize storage service
@@ -82,6 +90,76 @@ class StorageService {
     await _prefs.setString(_keyLastDeepLink, linkDataJson);
   }
 
+  // ── Event queue ────────────────────────────────────────────────────────
+  //
+  // Stored as a list of JSON strings rather than one blob so appending a single
+  // event doesn't cost a full re-encode of the whole queue.
+
+  /// The persisted event queue, oldest first.
+  List<String> getEventQueue() {
+    return _prefs.getStringList(_keyEventQueue) ?? const [];
+  }
+
+  Future<void> setEventQueue(List<String> events) async {
+    await _prefs.setStringList(_keyEventQueue, events);
+  }
+
+  Future<void> clearEventQueue() async {
+    await _prefs.remove(_keyEventQueue);
+  }
+
+  /// Events discarded because the queue was full. Reported as a diagnostic so
+  /// silent data loss is at least visible.
+  int getDroppedEventCount() => _prefs.getInt(_keyDroppedEventCount) ?? 0;
+
+  Future<void> addDroppedEvents(int count) async {
+    await _prefs.setInt(_keyDroppedEventCount, getDroppedEventCount() + count);
+  }
+
+  // ── Identity ───────────────────────────────────────────────────────────
+
+  String? getUserId() => _prefs.getString(_keyUserId);
+
+  Future<void> setUserId(String userId) async {
+    await _prefs.setString(_keyUserId, userId);
+  }
+
+  Future<void> clearUserId() async {
+    await _prefs.remove(_keyUserId);
+  }
+
+  /// An identify() call that could not reach the server yet.
+  ///
+  /// Persisted so a user who signs in offline is still identified when
+  /// connectivity returns, rather than silently staying anonymous.
+  String? getPendingIdentify() => _prefs.getString(_keyPendingIdentify);
+
+  Future<void> setPendingIdentify(String payloadJson) async {
+    await _prefs.setString(_keyPendingIdentify, payloadJson);
+  }
+
+  Future<void> clearPendingIdentify() async {
+    await _prefs.remove(_keyPendingIdentify);
+  }
+
+  // ── Sessions ───────────────────────────────────────────────────────────
+
+  String? getSessionId() => _prefs.getString(_keySessionId);
+
+  Future<void> setSessionId(String sessionId) async {
+    await _prefs.setString(_keySessionId, sessionId);
+  }
+
+  DateTime? getSessionLastActive() {
+    final raw = _prefs.getString(_keySessionLastActive);
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> setSessionLastActive(DateTime time) async {
+    await _prefs.setString(_keySessionLastActive, time.toIso8601String());
+  }
+
   /// Clear all SmartLink data
   Future<void> clearAll() async {
     await _prefs.remove(_keyFirstLaunch);
@@ -89,6 +167,12 @@ class StorageService {
     await _prefs.remove(_keyLastDeferredLinkCheck);
     await _prefs.remove(_keyLastDeferredLink);
     await _prefs.remove(_keyLastDeepLink);
+    await _prefs.remove(_keyEventQueue);
+    await _prefs.remove(_keyUserId);
+    await _prefs.remove(_keySessionId);
+    await _prefs.remove(_keySessionLastActive);
+    await _prefs.remove(_keyPendingIdentify);
+    await _prefs.remove(_keyDroppedEventCount);
   }
 
   /// Check if more than N hours have passed since last deferred link check

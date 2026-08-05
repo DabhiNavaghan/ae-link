@@ -11,6 +11,7 @@ import 'services/deferred_link_service.dart';
 import 'services/device_info_service.dart';
 import 'services/fingerprint_service.dart';
 import 'services/storage_service.dart';
+import 'services/tracking_service.dart';
 import 'utils/device_info.dart';
 import 'utils/logger.dart';
 
@@ -27,6 +28,7 @@ class SmartLinkSdk {
   late FingerprintService _fingerprintService;
   late DeferredLinkService _deferredLinkService;
   late DeepLinkHandler _deepLinkHandler;
+  TrackingService? _trackingService;
 
   DeepLinkData? _lastDeepLink;
   final StreamController<DeepLinkData> _deepLinkStreamController =
@@ -94,7 +96,14 @@ class SmartLinkSdk {
         return;
       }
 
-      // ── STEP 2: Setup deep link handler ──
+      // ── STEP 2: Setup event tracking ──
+      // Started before the deep link handler so the deep_link_opened event
+      // below has a queue to land in.
+      if (config.enableEventTracking) {
+        await sdk._initializeTracking();
+      }
+
+      // ── STEP 3: Setup deep link handler ──
       sdk._deepLinkHandler.setConfig(config);
 
       // Subscribe BEFORE initialize so we don't miss the initial link.
@@ -103,6 +112,18 @@ class SmartLinkSdk {
       sdk._deepLinkHandler.onDeepLink.listen((deepLinkData) {
         sdk._lastDeepLink = deepLinkData;
         sdk._deepLinkStreamController.add(deepLinkData);
+
+        if (config.enableAutomaticEvents) {
+          unawaited(sdk._trackingService?.track(
+                'deep_link_opened',
+                properties: {
+                  if (deepLinkData.linkId != null) 'link_id': deepLinkData.linkId,
+                  if (deepLinkData.destinationUrl != null)
+                    'destination_url': deepLinkData.destinationUrl,
+                },
+              ) ??
+              Future<void>.value());
+        }
       });
 
       await sdk._deepLinkHandler.initialize();
@@ -131,6 +152,9 @@ class SmartLinkSdk {
       }
 
       final isFirstLaunch = await sdk._storageService.isFirstLaunch();
+      // Remembered for the automatic events: checkDeferredLink() clears the
+      // first-launch flag, so by the time tracking starts it would read false.
+      sdk._isFirstLaunchThisRun = isFirstLaunch;
 
       String? packageName;
       String? appVersion;
@@ -227,8 +251,162 @@ class SmartLinkSdk {
     }
   }
 
+  /// Start the tracking service and emit the automatic lifecycle events.
+  ///
+  /// The install/open distinction is taken from storage rather than from the
+  /// server's reply so it stays correct offline: a first launch with no
+  /// connectivity still records `app_install`, queued, and it sends later.
+  Future<void> _initializeTracking() async {
+    try {
+      final tracking = TrackingService(
+        config: _config,
+        storage: _storageService,
+      );
+      _trackingService = tracking;
+
+      String? appVersion;
+      try {
+        appVersion = (await PackageInfo.fromPlatform()).version;
+      } catch (_) {}
+
+      await tracking.initialize(
+        deviceId: _storageService.getDeviceId(),
+        appVersion: appVersion,
+      );
+
+      if (!_config.enableAutomaticEvents) return;
+
+      // A new session must be detected before currentSessionId() rotates it —
+      // asking afterwards would always say "not expired".
+      final startsNewSession = tracking.sessionExpired;
+
+      if (_isFirstLaunchThisRun) {
+        await tracking.track('app_install');
+      }
+      await tracking.track('app_open');
+
+      if (startsNewSession) {
+        await tracking.track('session_start');
+      }
+    } catch (e) {
+      // Tracking is additive. If it can't start, deep linking must still work.
+      SmartLinkLogger.debug('Event tracking failed to start: $e');
+    }
+  }
+
+  /// Captured during validation, before first-launch state is written away.
+  bool _isFirstLaunchThisRun = false;
+
   /// Whether the API key has been validated
   static bool get isValidated => _validated;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Event tracking
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Track an event.
+  ///
+  /// ```dart
+  /// await SmartLinkSdk.track(
+  ///   'ticket_purchase',
+  ///   value: 1250,
+  ///   currency: 'INR',
+  ///   properties: {'event_id': 'evt_991', 'qty': 2},
+  /// );
+  /// ```
+  ///
+  /// Returns immediately. The event is written to an on-disk queue and sent in
+  /// batches, so it survives a cold start and flushes when connectivity
+  /// returns. This never throws for network reasons — a purchase flow must not
+  /// fail because analytics did.
+  ///
+  /// [name] must match `^[a-z][a-z0-9_]{0,63}$`. Names are a small, fixed
+  /// vocabulary: put ids, titles and other varying values in [properties], not
+  /// in the name.
+  ///
+  /// Do not put personal data in [properties] — the server drops keys that look
+  /// like email addresses, phone numbers or names. Use [identify] for that.
+  static Future<void> track(
+    String name, {
+    num? value,
+    String? currency,
+    Map<String, dynamic>? properties,
+  }) async {
+    final tracking = _sdkInstance._trackingService;
+    if (tracking == null) {
+      SmartLinkLogger.debug('track("$name") ignored — tracking is not enabled');
+      return;
+    }
+    await tracking.track(
+      name,
+      value: value,
+      currency: currency,
+      properties: properties,
+    );
+  }
+
+  /// Attach this device to a signed-in user.
+  ///
+  /// ```dart
+  /// await SmartLinkSdk.identify('u_88213', traits: {'plan': 'pro'});
+  /// ```
+  ///
+  /// Everything tracked after this carries the user. Events tracked *before* it
+  /// on this device are backfilled server-side, bounded so they can never reach
+  /// across a previous sign-out — the person who used this device before keeps
+  /// their own history.
+  ///
+  /// The first identify also fixes the user's acquisition source: the link and
+  /// campaign that brought them in, permanently, across every device they later
+  /// sign in on.
+  ///
+  /// Only [traits] your tenant has allowlisted are stored. [email] is hashed
+  /// before storage unless your tenant has explicitly opted into plaintext.
+  static Future<bool> identify(
+    String userId, {
+    Map<String, dynamic>? traits,
+    String? email,
+  }) async {
+    final tracking = _sdkInstance._trackingService;
+    if (tracking == null) {
+      SmartLinkLogger.warning('identify() ignored — tracking is not enabled');
+      return false;
+    }
+    return tracking.identify(userId, traits: traits, email: email);
+  }
+
+  /// End the signed-in session on this device.
+  ///
+  /// Keeps the device id deliberately: rotating it would sever install
+  /// attribution and make the next launch look like a fresh install. The server
+  /// starts a new identity epoch instead, so the next person to sign in here
+  /// does not inherit this user's history.
+  static Future<bool> logout() async {
+    final tracking = _sdkInstance._trackingService;
+    if (tracking == null) return false;
+    return tracking.logout();
+  }
+
+  /// Send everything queued right now.
+  ///
+  /// Worth calling before a known exit — a checkout completing, the app being
+  /// backgrounded — so those events don't wait for the next interval.
+  static Future<void> flush() async {
+    await _sdkInstance._trackingService?.flush(force: true);
+  }
+
+  /// The user id this device is currently identified as, if any.
+  static String? get currentUserId =>
+      _sdkInstance._trackingService?.currentUserId;
+
+  /// Events waiting to be sent. Useful in debug UIs.
+  static int get queuedEventCount =>
+      _sdkInstance._trackingService?.queuedEventCount ?? 0;
+
+  /// Events discarded because the queue overflowed or exhausted its retries.
+  /// Non-zero means data was lost — worth surfacing rather than hiding.
+  static int get droppedEventCount =>
+      _sdkInstance._trackingService?.droppedEventCount ?? 0;
 
   /// Check if SDK has been initialized
   static bool get isInitialized => _instance != null;
@@ -329,6 +507,10 @@ class SmartLinkSdk {
   /// Dispose the SDK and cleanup resources
   static Future<void> dispose() async {
     final sdk = _sdkInstance;
+    // Tracking first — it makes a final flush attempt, and it needs the
+    // storage service that the other teardowns don't touch.
+    await sdk._trackingService?.dispose();
+    sdk._trackingService = null;
     await sdk._deepLinkHandler.dispose();
     await sdk._deepLinkStreamController.close();
     sdk._deferredLinkService.dispose();

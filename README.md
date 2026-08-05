@@ -5,6 +5,9 @@ Flutter SDK for deep linking with the SmartLink platform. Handles two separate s
 1. **Direct Deep Link** (`onDeepLink`) → App is installed, user clicks a link, app opens with link data
 2. **Deferred Deep Link** (`onDeferredDeepLink`) → App is NOT installed, user clicks link → store → installs → first launch delivers the original link data
 
+It also tracks what people do *after* they install — see
+[Event Tracking](#event-tracking) for `track()`, `identify()` and `logout()`.
+
 **Backend:** [smartlink-backend](https://github.com/DabhiNavaghan/ae-link-backend)
 **SDK Repo:** [smartlink](https://github.com/DabhiNavaghan/ae-link)
 **Dashboard:** [smartlink-coral.vercel.app](https://smartlink-coral.vercel.app)
@@ -163,6 +166,116 @@ data.linkParams?.couponCode;   // "SAVE20"
 data.linkParams?.referralCode; // "REF123"
 data.linkParams?.userEmail;    // "user@example.com"
 ```
+
+## Event Tracking
+
+Deep linking tells you a link was clicked and an app was installed. Event
+tracking tells you what happened next, and which link earned it.
+
+### Track an event
+
+```dart
+await smartLink.track(
+  'ticket_purchase',
+  value: 1250,
+  currency: 'INR',
+  properties: {'event_id': 'evt_991', 'qty': 2},
+);
+```
+
+Returns as soon as the event is on disk. The SDK batches and sends in the
+background, survives a cold start, and flushes when connectivity returns. It
+never throws for network reasons — a checkout must not fail because analytics did.
+
+**Event names** must match `^[a-z][a-z0-9_]{0,63}$` — lowercase letters, digits
+and underscores. Names are a small fixed vocabulary, so put ids, titles and other
+varying values in `properties`, never in the name. A tenant is capped at 200
+distinct names; hitting that usually means a value was sent as a name by mistake.
+
+**Do not put personal data in `properties`.** The server drops keys that look
+like emails, phone numbers, names or card details, and reports the drop back so
+it surfaces during integration rather than in an audit. Use `identify()` for
+anything about a person.
+
+### Identify a user on sign-in
+
+```dart
+await smartLink.identify('u_88213', traits: {'plan': 'pro'});
+```
+
+Everything tracked after this carries the user. Events tracked *before* it on this
+device are backfilled onto them server-side — those were the same person browsing
+before they signed in.
+
+The first `identify()` also fixes the user's **acquisition source**: the link and
+campaign that brought them in, permanently, across every device they later sign in
+on. Later sign-ins never overwrite it.
+
+Only trait keys your tenant has allowlisted are stored. `email` is hashed before
+storage unless your tenant has explicitly opted into plaintext.
+
+### Sign out
+
+```dart
+await smartLink.logout();
+```
+
+Keeps `deviceId` deliberately. Rotating it would sever install attribution and
+make the next launch look like a fresh install, re-counting it. The server starts
+a new identity epoch instead, which is what stops the next person signing in on a
+shared device from inheriting the previous user's history.
+
+### Flush before a known exit
+
+```dart
+await smartLink.flush();
+```
+
+### Automatic events
+
+Emitted without you writing any tracking code, so a funnel exists on day one:
+
+| Event | When |
+|---|---|
+| `app_install` | First launch after install |
+| `app_open` | Every launch |
+| `session_start` | New session (after 30 min backgrounded) |
+| `deep_link_opened` | A SmartLink URL opened the app |
+| `user_identified` | `identify()` succeeded |
+| `user_logged_out` | `logout()` was called |
+
+Turn them off with `enableAutomaticEvents: false`.
+
+### Opting out of tracking entirely
+
+```dart
+smartLink = SmartLink(
+  apiKey: 'YOUR_API_KEY',
+  enableEventTracking: false,   // honours a user's analytics opt-out
+);
+```
+
+Deep linking and attribution keep working.
+
+### Inspecting the queue
+
+```dart
+smartLink.currentUserId;       // who this device is signed in as, or null
+smartLink.queuedEventCount;    // still waiting to send
+smartLink.droppedEventCount;   // lost to queue overflow or exhausted retries
+```
+
+`droppedEventCount` being non-zero means data was lost. It is exposed rather than
+hidden so you can surface it in a debug screen.
+
+### Revenue you can bill on
+
+Your API key ships inside your app binary, so anyone who decompiles the app has
+it. Revenue sent with it is fine for product analytics and **not** sufficient for
+billing or partner payouts. For money that matters, send the event from your own
+backend using your tenant key, or HMAC-sign it. Ask your platform admin to enable
+`requireSignedRevenue`, after which unsigned monetary events are rejected rather
+than quietly recorded.
 
 ## Log Levels
 

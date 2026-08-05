@@ -28,6 +28,21 @@ class SmartLinkConfig {
   /// Custom headers to include in all API requests
   final Map<String, String>? customHeaders;
 
+  /// Whether the SDK emits lifecycle events on its own.
+  ///
+  /// When `true` (default), the SDK tracks `app_install`, `app_open`,
+  /// `session_start` and `deep_link_opened` without the host app writing any
+  /// tracking code — enough to populate a funnel on day one. Set to `false` if
+  /// you would rather send everything explicitly.
+  final bool enableAutomaticEvents;
+
+  /// Whether event tracking is enabled at all.
+  ///
+  /// Set to `false` to disable `track()`, `identify()` and all automatic
+  /// events — useful for honouring a user's analytics opt-out. Deep linking and
+  /// attribution continue to work.
+  final bool enableEventTracking;
+
   /// Create a new SmartLinkConfig instance
   ///
   /// [logLevel] controls log verbosity:
@@ -41,6 +56,8 @@ class SmartLinkConfig {
     this.requestTimeoutSeconds = 30,
     this.handleExternalDeepLinks = false,
     this.customHeaders,
+    this.enableAutomaticEvents = true,
+    this.enableEventTracking = true,
   }) : apiBaseUrl = apiBaseUrl.endsWith('/')
            ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
            : apiBaseUrl,

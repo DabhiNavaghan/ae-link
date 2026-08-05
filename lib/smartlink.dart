@@ -11,4 +11,5 @@ export 'src/config.dart';
 export 'src/models/deep_link_data.dart';
 export 'src/models/device_fingerprint.dart';
 export 'src/models/link_params.dart';
+export 'src/models/tracked_event.dart';
 export 'src/utils/logger.dart';

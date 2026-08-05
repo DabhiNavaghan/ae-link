@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'smartlink_sdk.dart';
 import 'config.dart';
 import 'models/deep_link_data.dart';
@@ -69,6 +68,20 @@ class SmartLink {
   /// - `true`: All deep links (including external) are passed to onDeepLink.
   final bool handleExternalDeepLinks;
 
+  /// Whether event tracking is available at all.
+  ///
+  /// Set to `false` to disable [track], [identify] and all automatic events —
+  /// useful for honouring a user's analytics opt-out. Deep linking and
+  /// attribution keep working either way.
+  final bool enableEventTracking;
+
+  /// Whether the SDK emits lifecycle events on its own.
+  ///
+  /// When `true` (default) it tracks `app_install`, `app_open`,
+  /// `session_start` and `deep_link_opened` without you writing any tracking
+  /// code — enough to populate a funnel on day one.
+  final bool enableAutomaticEvents;
+
   StreamSubscription<DeepLinkData>? _deepLinkSubscription;
   bool _initialized = false;
 
@@ -81,6 +94,8 @@ class SmartLink {
     this.logLevel,
     this.timeoutSeconds = 30,
     this.handleExternalDeepLinks = false,
+    this.enableEventTracking = true,
+    this.enableAutomaticEvents = true,
   });
 
   /// Initialize the SDK, check for deferred deep links, and start listening.
@@ -121,6 +136,8 @@ class SmartLink {
           logLevel: logLevel,
           requestTimeoutSeconds: timeoutSeconds,
           handleExternalDeepLinks: handleExternalDeepLinks,
+          enableEventTracking: enableEventTracking,
+          enableAutomaticEvents: enableAutomaticEvents,
         ),
       );
 
@@ -161,6 +178,86 @@ class SmartLink {
       return null;
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Event tracking
+  //
+  // Thin delegations to SmartLinkSdk, so tracking is reachable from the same
+  // object you already hold. Everything difficult — the on-disk queue, batching,
+  // retry, sessions, offline identify replay — lives in TrackingService.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Track an event.
+  ///
+  /// ```dart
+  /// await smartLink.track(
+  ///   'ticket_purchase',
+  ///   value: 1250,
+  ///   currency: 'INR',
+  ///   properties: {'event_id': 'evt_991', 'qty': 2},
+  /// );
+  /// ```
+  ///
+  /// Returns as soon as the event is queued on disk — it survives a cold start
+  /// and flushes when connectivity returns. Never throws for network reasons:
+  /// a checkout must not fail because analytics did.
+  ///
+  /// [name] must match `^[a-z][a-z0-9_]{0,63}$`. Names are a small fixed
+  /// vocabulary — put ids, titles and other varying values in [properties].
+  ///
+  /// Do not put personal data in [properties]; the server drops keys that look
+  /// like emails, phone numbers or names. Use [identify] for that.
+  Future<void> track(
+    String name, {
+    num? value,
+    String? currency,
+    Map<String, dynamic>? properties,
+  }) =>
+      SmartLinkSdk.track(
+        name,
+        value: value,
+        currency: currency,
+        properties: properties,
+      );
+
+  /// Attach this device to a signed-in user.
+  ///
+  /// Everything tracked after this carries the user. Events tracked *before* it
+  /// on this device are backfilled server-side, bounded so they can never reach
+  /// across a previous sign-out — whoever used this device before keeps their
+  /// own history.
+  ///
+  /// The first call also fixes the user's acquisition source: the link and
+  /// campaign that brought them in, permanently, across every device they later
+  /// sign in on.
+  Future<bool> identify(
+    String userId, {
+    Map<String, dynamic>? traits,
+    String? email,
+  }) =>
+      SmartLinkSdk.identify(userId, traits: traits, email: email);
+
+  /// End the signed-in session on this device.
+  ///
+  /// Keeps the device id deliberately — rotating it would sever install
+  /// attribution and make the next launch look like a fresh install.
+  Future<bool> logout() => SmartLinkSdk.logout();
+
+  /// Send everything queued right now.
+  ///
+  /// Worth calling before a known exit — a checkout completing, the app being
+  /// backgrounded — so those events don't wait for the next interval.
+  Future<void> flush() => SmartLinkSdk.flush();
+
+  /// The user id this device is currently identified as, if any.
+  String? get currentUserId => SmartLinkSdk.currentUserId;
+
+  /// Events still waiting to be sent.
+  int get queuedEventCount => SmartLinkSdk.queuedEventCount;
+
+  /// Events discarded because the queue overflowed or exhausted its retries.
+  /// Non-zero means data was lost — worth surfacing rather than hiding.
+  int get droppedEventCount => SmartLinkSdk.droppedEventCount;
 
   /// Get the device ID assigned by the SDK
   String? get deviceId => SmartLinkSdk.getDeviceId();

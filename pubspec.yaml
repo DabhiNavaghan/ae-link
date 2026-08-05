@@ -1,6 +1,6 @@
 name: smartlink
 description: Flutter SDK for SmartLink — deep linking platform with deferred deep linking, device fingerprinting, and seamless app attribution.
-version: 1.0.0
+version: 1.1.0
 publish_to: none
 
 environment:

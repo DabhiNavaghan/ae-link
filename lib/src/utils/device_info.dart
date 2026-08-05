@@ -83,37 +83,59 @@ class DeviceInfoHelper {
     return 'unknown';
   }
 
-  /// Get screen dimensions for fingerprint matching
+  /// Get screen dimensions for fingerprint matching.
   ///
-  /// On mobile browsers, window.screen.width/height returns CSS pixels
-  /// (logical pixels), NOT physical pixels. For example:
-  ///   - Physical: 1080x2400
-  ///   - CSS/Logical: 360x800 (at 3x density)
+  /// PHYSICAL pixels are the primary signal. Logical pixels are NOT directly
+  /// comparable across browser and app: Chrome reports CSS pixels at its own
+  /// device-scale-factor while Flutter reports logical pixels at
+  /// [FlutterView.devicePixelRatio], and on most Android devices those two
+  /// ratios differ (e.g. a panel that Chrome calls 412x915 Flutter calls
+  /// 384x853). Multiplying each side back out by its own ratio lands both on
+  /// the panel's real resolution, which always agrees.
   ///
-  /// Flutter's mediaQuery.size also gives logical pixels, so we send
-  /// LOGICAL pixels to match the browser's values.
-  /// We also send physical pixels as extra data for reference.
+  /// We read [FlutterView.physicalSize] directly rather than
+  /// `MediaQueryData.size`, because the latter is derived and reads as zero
+  /// before the first frame — the exact moment the SDK collects a fingerprint
+  /// on a cold start.
   static Map<String, double> getScreenDimensions() {
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
-    final mediaQuery = MediaQueryData.fromView(view);
-    final dpr = mediaQuery.devicePixelRatio;
+    final dpr = view.devicePixelRatio;
+    final physical = view.physicalSize;
+
+    // Guard against a zero-size view (can happen if called before the engine
+    // has attached a surface) — fall back to the MediaQuery-derived size.
+    var physicalWidth = physical.width;
+    var physicalHeight = physical.height;
+    if (physicalWidth <= 0 || physicalHeight <= 0) {
+      final size = MediaQueryData.fromView(view).size;
+      physicalWidth = size.width * dpr;
+      physicalHeight = size.height * dpr;
+    }
+
     return {
-      // Send LOGICAL pixels to match browser's window.screen.width/height
-      // which reports CSS pixels on mobile browsers
-      'width': mediaQuery.size.width.roundToDouble(),
-      'height': mediaQuery.size.height.roundToDouble(),
+      // Logical pixels — kept for backwards compatibility and display.
+      'width': (physicalWidth / dpr).roundToDouble(),
+      'height': (physicalHeight / dpr).roundToDouble(),
       'density': dpr,
-      // Also send physical pixels for reference/storage
-      'physicalWidth': (mediaQuery.size.width * dpr).roundToDouble(),
-      'physicalHeight': (mediaQuery.size.height * dpr).roundToDouble(),
+      // Physical pixels — the signal the backend actually matches on.
+      'physicalWidth': physicalWidth.roundToDouble(),
+      'physicalHeight': physicalHeight.roundToDouble(),
     };
   }
 
   /// Get device locale (matches browser's navigator.language format: "en-US")
+  ///
+  /// The country code is frequently null on Android. Emitting "en-null" in
+  /// that case downgraded an otherwise exact locale match to a partial one,
+  /// so a missing region is dropped and the bare language code is sent.
   static String getLocale() {
     final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    final country = locale.countryCode;
+    if (country == null || country.isEmpty) {
+      return locale.languageCode;
+    }
     // Use hyphen separator to match browser format (navigator.language = "en-US")
-    return '${locale.languageCode}-${locale.countryCode}';
+    return '${locale.languageCode}-$country';
   }
 
   /// Get device timezone (IANA name to match browser's Intl.DateTimeFormat)
@@ -178,21 +200,12 @@ class DeviceInfoHelper {
     }
   }
 
-  /// Get public IP address (requires a call to ipify API or similar)
-  static Future<String?> getPublicIpAddress() async {
-    try {
-      // Using a simple free IP detection service
-      final response = await Future.delayed(
-        const Duration(seconds: 1),
-        () => null,
-      );
-      // Note: In production, you'd call an IP detection API
-      // This is a placeholder - the backend can detect IP from request headers
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
+  /// Always returns null — the client does not resolve its own public IP.
+  ///
+  /// The backend reads the IP from the request headers, which is both cheaper
+  /// and harder to spoof than trusting a value the client looked up itself.
+  /// Kept so callers compiled against it keep working.
+  static Future<String?> getPublicIpAddress() async => null;
 
   /// Get Android-specific device info
   static Future<Map<String, dynamic>?> getAndroidDeviceInfo() async {
