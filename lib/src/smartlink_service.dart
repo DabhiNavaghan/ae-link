@@ -23,10 +23,13 @@ typedef ErrorCallback = void Function(String message, dynamic error);
 /// - [onDeferredDeepLink] — fires on first launch if the user installed via a link
 ///
 /// Usage in main.dart:
+/// Only [apiKey] is required. [apiBaseUrl] defaults to the production backend
+/// and [linkDomains] is issued by that backend at init, scoped to the key —
+/// neither belongs in app code unless you are self-hosting.
+///
 /// ```dart
 /// final smartLink = SmartLink(
 ///   apiKey: 'your-api-key',
-///   apiBaseUrl: 'https://smartlink.apps.allevents.app',
 ///   onDeepLink: (data) {
 ///     // App was already installed — user clicked a link
 ///     // Navigate based on data.eventId, data.action, etc.

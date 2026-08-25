@@ -63,9 +63,11 @@ Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
         <!-- Platform host -->
         <data android:scheme="https" android:host="smartlink.apps.allevents.app" />
 
-        <!-- Your app's link domains — copy them from
-             Dashboard → Apps → your app → Link domains -->
-        <data android:scheme="https" android:host="YOUR-LINK-DOMAIN" />
+        <!-- Your app's link domain — the last label of your applicationId
+             under aelinks.io, e.g. com.amitech.allevents →
+             allevents.aelinks.io. Dashboard → Apps → your app shows the
+             exact host. -->
+        <data android:scheme="https" android:host="allevents.aelinks.io" />
     </intent-filter>
 </activity>
 ```
@@ -82,8 +84,11 @@ and add one entry per host:
 
 ```
 applinks:smartlink.apps.allevents.app
-applinks:YOUR-LINK-DOMAIN
+applinks:allevents.aelinks.io
 ```
+
+Same host as Android — derived from the bundle ID, shown on the app's
+dashboard page.
 
 Each is verified against `https://<host>/.well-known/apple-app-site-association`.
 As with Android, a host that is not listed here is never delivered to the app.
@@ -102,12 +107,10 @@ import 'package:flutter/widgets.dart';
 
 late SmartLink smartLink;
 
-Future<DeepLinkData?> initSmartLink({bool isExistingUser = false}) async {
+Future<DeepLinkData?> initSmartLink() async {
   smartLink = SmartLink(
-    apiKey: 'YOUR_API_KEY',       // From dashboard Settings
-    apiBaseUrl: 'https://smartlink.apps.allevents.app',
-    logLevel: 0,                   // -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
-    isExistingUser: isExistingUser,
+    apiKey: 'YOUR_API_KEY',  // From dashboard Settings
+    logLevel: 0,             // -1 = detailed debug, 0 = minimal debug, 1 = release (no logs)
 
     // Called when app is ALREADY installed and user clicks a link
     onDeepLink: (data) {
@@ -134,11 +137,24 @@ import 'services/smart_link_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await initSmartLink(isExistingUser: false);
+  await initSmartLink();
 
   runApp(MyApp());
 }
 ```
+
+That is the whole integration. **You do not pass `apiBaseUrl` and you do not
+pass `linkDomains`** — the first defaults to the production backend, and the
+second is issued by that backend at init, scoped to your API key. See
+[Which Links Count as SmartLinks](#which-links-count-as-smartlinks).
+
+| Parameter | Default | When you'd set it |
+|---|---|---|
+| `apiKey` | — | always — from dashboard Settings |
+| `apiBaseUrl` | `https://smartlink.apps.allevents.app` | self-hosted or staging backend only |
+| `linkDomains` | fetched from the backend | self-hosted / air-gapped builds only |
+| `logLevel` | `1` (silent) | `0` or `-1` while developing |
+| `handleExternalDeepLinks` | `false` | to receive non-SmartLink deep links too |
 
 ## Two Callbacks — When Each Fires
 
@@ -166,27 +182,69 @@ delivered to your callbacks — when its host matches one of your app's **link
 domains**. Everything else is an *external* deep link, governed by
 `handleExternalDeepLinks` (default `false`: external links are ignored).
 
-### The list is fetched, not compiled in
+### The list is derived, not compiled in
 
-The SDK ships with **no domain list**. Domains are managed in
-**Dashboard → Apps → your app → Link domains** and delivered at runtime:
+The SDK ships with **no domain list**, and nobody maintains one by hand. Your
+link host is **derived from the app identifier you already declare** — the
+Android `applicationId` or the iOS bundle ID — and delivered at runtime:
+
+| App identifier | Link domain |
+|---|---|
+| `com.amitech.allevents` | `allevents.aelinks.io` |
+| `com.amitech.allevents.debug` | `allevents.aelinks.io` |
+| `com.example.myapp` | `myapp.aelinks.io` |
+
+The rule is: take the last label of the identifier, drop any build-variant
+suffix (`.debug`, `.staging`, `.beta`, …), and place it under the platform's
+link domain. Underscores become hyphens; case is ignored.
+
+How it reaches the app:
 
 1. On `initialize()`, the SDK calls `/api/v1/sdk/init` with your API key.
-2. The backend returns the link domains **for that app only** — scoped to the
+2. The backend derives the host from the registered app's identifiers and
+   returns the link domains **for that app only** — scoped to the
    authenticated key, so one tenant's hosts are never sent to another's app.
+   If the launch could not be narrowed to a single registered app, it widens
+   to that tenant's domains and derives from the reported package name, rather
+   than sending none.
 3. The SDK caches them on device, namespaced by a hash of your API key and
    base URL, so the next cold start classifies links before the network answers.
 
 This means your domains are not discoverable by decompiling the SDK, adding a
 domain does not need an app release, and the SDK stays tenant-agnostic.
 
+### When the derived host is wrong
+
+Some apps serve links on a host that does not match their identifier. Those are
+named explicitly in `PACKAGE_LINK_DOMAIN_OVERRIDES`
+(`web-app/src/lib/utils/domain-map.ts`) — for example
+`com.amitech.alleventsorg` ships as `alleventsorg` but its links live on
+`organizer.aelinks.io`:
+
+```ts
+export const PACKAGE_LINK_DOMAIN_OVERRIDES = Object.freeze({
+  'com.amitech.alleventsorg': `organizer.${LINK_DOMAIN_BASE}`,
+});
+```
+
+An override covers that app's build variants too. Anything not listed follows
+the rule. For a one-off extra host you can also add it per app under
+**Dashboard → Apps → your app → Edit → Link Domains**, which is unioned with
+the derived one — but the derived host is the normal path and needs no entry.
+
 ### What is trusted, and when
 
 | Source | Trusted |
 |---|---|
-| `apiBaseUrl` host | always — you configured it |
+| `apiBaseUrl` host | always — the default, or whatever you configured |
 | Server-issued domains | after the first successful `initialize()`, then from cache |
 | `linkDomains` config | always, if you set it (self-hosted escape hatch) |
+
+If a short link on your own host is being treated as external, check the app's
+Android package / iOS bundle ID in **Dashboard → Apps** — the domain is derived
+from those. `Dashboard → Apps → your app` shows the effective list, marking
+each host `auto` (derived) or `manual`. You can also print what an install
+currently trusts with `SmartLinkSdk.linkDomains`.
 
 Before the first *ever* successful init — a brand-new install with no
 connectivity — only the `apiBaseUrl` host is trusted. Links on other hosts are
