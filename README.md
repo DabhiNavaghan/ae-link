@@ -59,20 +59,38 @@ Add to `android/app/src/main/AndroidManifest.xml` inside your `<activity>` tag:
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
+
+        <!-- Platform host -->
         <data android:scheme="https" android:host="smartlink.apps.allevents.app" />
+
+        <!-- Your app's link domains — copy them from
+             Dashboard → Apps → your app → Link domains -->
+        <data android:scheme="https" android:host="YOUR-LINK-DOMAIN" />
     </intent-filter>
 </activity>
 ```
 
-Replace the host with your deployment domain if different.
+Add one `<data>` line per link domain. Android verifies each against
+`https://<host>/.well-known/assetlinks.json`, which the backend serves per
+host. **A host not listed here never reaches the SDK at all** — this part is a
+build-time OS requirement and cannot be configured remotely.
 
 ### 4. iOS — Universal Links setup
 
-In Xcode, go to your target → Signing & Capabilities → add "Associated Domains" and add:
+In Xcode, go to your target → Signing & Capabilities → add "Associated Domains"
+and add one entry per host:
 
 ```
 applinks:smartlink.apps.allevents.app
+applinks:YOUR-LINK-DOMAIN
 ```
+
+Each is verified against `https://<host>/.well-known/apple-app-site-association`.
+As with Android, a host that is not listed here is never delivered to the app.
+
+> These two files are the only place your domains are named in the app. The SDK
+> itself ships with no domain list — see
+> [Which Links Count as SmartLinks](#which-links-count-as-smartlinks).
 
 ### 5. Initialize the SDK
 
@@ -126,7 +144,8 @@ void main() async {
 
 ### `onDeepLink` — Direct Deep Link
 - App is **already installed** on the device
-- User clicks a SmartLink URL (e.g., `https://smartlink.apps.allevents.app/xGJEQJR`)
+- User clicks a SmartLink URL on one of your app's link domains
+  (e.g. `https://smartlink.apps.allevents.app/xGJEQJR`)
 - Android/iOS opens the app directly via App Links / Universal Links
 - `onDeepLink` fires with the link data
 
@@ -139,6 +158,72 @@ void main() async {
 - `onDeferredDeepLink` fires with the original link data
 
 These callbacks **never overlap** — a deep link is either direct or deferred, never both.
+
+## Which Links Count as SmartLinks
+
+A link is treated as **ours** — resolved through the backend, tracked, and
+delivered to your callbacks — when its host matches one of your app's **link
+domains**. Everything else is an *external* deep link, governed by
+`handleExternalDeepLinks` (default `false`: external links are ignored).
+
+### The list is fetched, not compiled in
+
+The SDK ships with **no domain list**. Domains are managed in
+**Dashboard → Apps → your app → Link domains** and delivered at runtime:
+
+1. On `initialize()`, the SDK calls `/api/v1/sdk/init` with your API key.
+2. The backend returns the link domains **for that app only** — scoped to the
+   authenticated key, so one tenant's hosts are never sent to another's app.
+3. The SDK caches them on device, namespaced by a hash of your API key and
+   base URL, so the next cold start classifies links before the network answers.
+
+This means your domains are not discoverable by decompiling the SDK, adding a
+domain does not need an app release, and the SDK stays tenant-agnostic.
+
+### What is trusted, and when
+
+| Source | Trusted |
+|---|---|
+| `apiBaseUrl` host | always — you configured it |
+| Server-issued domains | after the first successful `initialize()`, then from cache |
+| `linkDomains` config | always, if you set it (self-hosted escape hatch) |
+
+Before the first *ever* successful init — a brand-new install with no
+connectivity — only the `apiBaseUrl` host is trusted. Links on other hosts are
+treated as external until init succeeds once. Launch attribution still works in
+that window: the SDK sends the raw launch URL and the backend, which always
+knows the domains, derives the attribution itself.
+
+Matching is anchored on a label boundary. Given `*.example.com`,
+`go.example.com` matches but `evil-example.com` and
+`example.com.attacker.com` do not. Entries too broad to be safe — a bare TLD,
+`*.com` — are rejected by both the backend and the SDK.
+
+Inspect what an install currently trusts:
+
+```dart
+print(SmartLinkSdk.linkDomains);
+```
+
+### Self-hosted override
+
+Only needed when the server list cannot be relied on:
+
+```dart
+SmartLink(
+  apiKey: 'YOUR_API_KEY',
+  linkDomains: [
+    'links.mybrand.com',   // exact host
+    '*.mybrand.io',        // the domain and all of its subdomains
+  ],
+  onDeepLink: (data) { /* ... */ },
+);
+```
+
+> Adding a host — in the dashboard or here — only tells the **SDK** to treat it
+> as ours. The OS still has to be told separately, in the Android
+> `<intent-filter>` and iOS Associated Domains (steps 3 and 4), or the link
+> never reaches the app in the first place.
 
 ## Available data in DeepLinkData
 

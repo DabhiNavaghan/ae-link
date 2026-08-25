@@ -16,14 +16,40 @@ class SmartLinkConfig {
   /// Timeout duration for API calls in seconds
   final int requestTimeoutSeconds;
 
-  /// Whether to handle external deep links (links not from the SmartLink domain).
+  /// Whether to handle external deep links (links not from a SmartLink domain).
   ///
-  /// - `false` (default): Only links from your SmartLink domain
-  ///   (apiBaseUrl) trigger onDeepLink / onDeferredDeepLink callbacks.
-  ///   External links are silently ignored by the SDK.
+  /// - `false` (default): Only links whose host is one of your app's link
+  ///   domains — see [LinkDomainRegistry] — trigger onDeepLink /
+  ///   onDeferredDeepLink. External links are silently ignored by the SDK.
   /// - `true`: All deep links are processed, including external ones.
   ///   External links are parsed from the URL and delivered via onDeepLink.
+  ///
+  /// This flag has no bearing on your own link domains — those are always
+  /// resolved through the backend.
   final bool handleExternalDeepLinks;
+
+  /// Optional override: extra hosts to treat as first-party SmartLink domains.
+  ///
+  /// **You normally do not need this.** The SDK fetches your app's link
+  /// domains from the backend at init (scoped to your API key) and caches them
+  /// on device, so nothing tenant-specific is compiled into the app binary.
+  /// Manage the list in the dashboard instead.
+  ///
+  /// Use this only when the server list cannot be relied on — a self-hosted
+  /// deployment, or an air-gapped build that must classify links before its
+  /// first successful init:
+  ///
+  /// ```dart
+  /// SmartLinkConfig(
+  ///   tenantApiKey: '...',
+  ///   linkDomains: ['links.mybrand.com', '*.mybrand.io'],
+  /// )
+  /// ```
+  ///
+  /// A `*.` prefix matches that domain and all of its subdomains; a bare host
+  /// matches exactly. Full URLs are accepted and reduced to their host.
+  /// Entries too broad to be safe (a bare TLD, `*.com`) are discarded.
+  final List<String> linkDomains;
 
   /// Custom headers to include in all API requests
   final Map<String, String>? customHeaders;
@@ -55,6 +81,7 @@ class SmartLinkConfig {
     int? logLevel,
     this.requestTimeoutSeconds = 30,
     this.handleExternalDeepLinks = false,
+    this.linkDomains = const [],
     this.customHeaders,
     this.enableAutomaticEvents = true,
     this.enableEventTracking = true,

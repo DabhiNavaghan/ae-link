@@ -1,7 +1,23 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The slice of storage the link-domain registry needs.
+///
+/// Narrow on purpose: [LinkDomainRegistry] should not be able to reach the
+/// device id, the event queue or anything else, and a test can satisfy this
+/// without SharedPreferences.
+abstract class StorageServiceLinkDomains {
+  /// Cached link-domain payload for [namespace], or null if nothing is stored.
+  String? getLinkDomains(String namespace);
+
+  /// Cache the link-domain payload for [namespace].
+  Future<void> setLinkDomains(String namespace, String payload);
+
+  /// Drop the cached link domains for [namespace].
+  Future<void> clearLinkDomains(String namespace);
+}
+
 /// Service for managing local storage using SharedPreferences
-class StorageService {
+class StorageService implements StorageServiceLinkDomains {
   static const String _keyFirstLaunch = 'smartlink_first_launch';
   static const String _keyDeviceId = 'smartlink_device_id';
   static const String _keyLastDeferredLinkCheck = 'smartlink_last_deferred_link_check';
@@ -15,6 +31,10 @@ class StorageService {
   static const String _keySessionLastActive = 'smartlink_session_last_active';
   static const String _keyPendingIdentify = 'smartlink_pending_identify';
   static const String _keyDroppedEventCount = 'smartlink_dropped_events';
+  /// Prefix for the cached link-domain list. The namespace suffix binds an
+  /// entry to the credentials it was issued for, so a different API key or
+  /// base URL never reads a list that was not issued to it.
+  static const String _keyLinkDomainsPrefix = 'smartlink_link_domains_';
 
   late SharedPreferences _prefs;
 
@@ -111,6 +131,23 @@ class StorageService {
   /// Events discarded because the queue was full. Reported as a diagnostic so
   /// silent data loss is at least visible.
   int getDroppedEventCount() => _prefs.getInt(_keyDroppedEventCount) ?? 0;
+
+  // ── Link domains (server-issued, cached per credentials) ──
+
+  @override
+  String? getLinkDomains(String namespace) {
+    return _prefs.getString('$_keyLinkDomainsPrefix$namespace');
+  }
+
+  @override
+  Future<void> setLinkDomains(String namespace, String payload) async {
+    await _prefs.setString('$_keyLinkDomainsPrefix$namespace', payload);
+  }
+
+  @override
+  Future<void> clearLinkDomains(String namespace) async {
+    await _prefs.remove('$_keyLinkDomainsPrefix$namespace');
+  }
 
   Future<void> addDroppedEvents(int count) async {
     await _prefs.setInt(_keyDroppedEventCount, getDroppedEventCount() + count);

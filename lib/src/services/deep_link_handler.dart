@@ -7,6 +7,7 @@ import '../models/deep_link_data.dart';
 import '../models/link_params.dart';
 import '../utils/device_info.dart';
 import '../utils/logger.dart';
+import 'link_domain_registry.dart';
 
 /// Service for handling incoming deep links via Universal Links / App Links
 ///
@@ -20,6 +21,7 @@ class DeepLinkHandler {
       StreamController<DeepLinkData>.broadcast();
 
   SmartLinkConfig? _config;
+  LinkDomainRegistry? _domainRegistry;
 
   /// Get stream of deep links
   Stream<DeepLinkData> get onDeepLink => _deepLinkController.stream;
@@ -27,6 +29,15 @@ class DeepLinkHandler {
   /// Set config for API calls (called from SDK init)
   void setConfig(SmartLinkConfig config) {
     _config = config;
+  }
+
+  /// Supply the registry that decides ours-vs-external.
+  ///
+  /// Called from SDK init once the link domains have been restored from cache
+  /// and refreshed from the backend, so the first link handled here is already
+  /// classified against the current list.
+  void setDomainRegistry(LinkDomainRegistry registry) {
+    _domainRegistry = registry;
   }
 
   /// Initialize deep link listener
@@ -73,19 +84,24 @@ class DeepLinkHandler {
 
   /// Handle incoming deep link URI
   ///
-  /// Only fires onDeepLink callback for links from the SmartLink domain
-  /// (created via the dashboard). External links are logged but ignored.
+  /// Only fires onDeepLink callback for links whose host is one of this app's
+  /// link domains (see [LinkDomainRegistry]). External links are logged but
+  /// ignored, unless handleExternalDeepLinks is on.
   Future<void> _handleDeepLink(Uri uri) async {
     try {
       final isSmartLink = _isSmartLinkUrl(uri);
 
       if (isSmartLink) {
-        // ── SmartLink domain URL → resolve short code via API ──
+        // ── One of our link hosts → resolve short code via API ──
         final shortCode = _extractShortCode(uri);
 
         if (shortCode != null && _config != null) {
           // Forward query params to resolve API for backend tracking
-          final resolved = await _resolveShortCode(shortCode, uri.queryParameters);
+          final resolved = await _resolveShortCode(
+            shortCode,
+            queryParams: uri.queryParameters,
+            sourceUrl: uri.toString(),
+          );
           if (resolved != null) {
             final merged = _mergeQueryParams(resolved, uri.queryParameters);
             _deepLinkController.add(merged);
@@ -136,17 +152,15 @@ class DeepLinkHandler {
     }
   }
 
-  /// Check if a URI belongs to the SmartLink domain (from apiBaseUrl config).
-  /// Only links from this domain were created via the dashboard.
+  /// Check if a URI belongs to one of our SmartLink domains.
+  ///
+  /// The domain list is issued by the backend per app and cached on device —
+  /// see [LinkDomainRegistry]. Until it is available the SDK trusts only the
+  /// configured `apiBaseUrl` host, which is the safe floor.
   bool _isSmartLinkUrl(Uri uri) {
-    if (_config == null) return false;
-
-    final smartLinkHost =
-        Uri.parse(_config!.apiBaseUrl).host.toLowerCase();
-    final linkHost = uri.host.toLowerCase();
-
-    // Exact match (e.g., smartlink.apps.allevents.app)
-    return linkHost == smartLinkHost;
+    final registry = _domainRegistry;
+    if (registry == null || _config == null) return false;
+    return registry.isSmartLinkUrl(uri);
   }
 
   /// Extract short code from a SmartLink URL
@@ -172,7 +186,13 @@ class DeepLinkHandler {
   /// Call backend API to resolve short code into full link data.
   /// Forwards all query params from the original URL so the backend
   /// can track them (deepLink, ref, utm_*, etc.) in click metadata.
-  Future<DeepLinkData?> _resolveShortCode(String shortCode, [Map<String, String>? queryParams]) async {
+  /// [sourceUrl] is the URL the link actually arrived on, kept as `rawUrl` so
+  /// the host app can tell which link domain opened it.
+  Future<DeepLinkData?> _resolveShortCode(
+    String shortCode, {
+    Map<String, String>? queryParams,
+    String? sourceUrl,
+  }) async {
     try {
       final params = <String, String>{'shortCode': shortCode};
       if (queryParams != null) params.addAll(queryParams);
@@ -222,7 +242,7 @@ class DeepLinkHandler {
             ),
             isDeferred: false,
             clickedAt: DateTime.now(),
-            rawUrl: '${_config!.apiBaseUrl}/$shortCode',
+            rawUrl: sourceUrl ?? '${_config!.apiBaseUrl}/$shortCode',
           );
         }
       } else {
@@ -325,7 +345,8 @@ class DeepLinkHandler {
   }
 
   /// Manually process a deep link URL.
-  /// Only SmartLink domain URLs will fire callbacks.
+  /// Only URLs on one of this app's link domains (see [LinkDomainRegistry])
+  /// will fire callbacks.
   void processDeepLink(String url) {
     try {
       final uri = Uri.parse(url);
