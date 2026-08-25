@@ -10,6 +10,7 @@ import 'services/deep_link_handler.dart';
 import 'services/deferred_link_service.dart';
 import 'services/device_info_service.dart';
 import 'services/fingerprint_service.dart';
+import 'services/link_domain_registry.dart';
 import 'services/storage_service.dart';
 import 'services/tracking_service.dart';
 import 'utils/device_info.dart';
@@ -28,7 +29,12 @@ class SmartLinkSdk {
   late FingerprintService _fingerprintService;
   late DeferredLinkService _deferredLinkService;
   late DeepLinkHandler _deepLinkHandler;
+  late LinkDomainRegistry _domainRegistry;
   TrackingService? _trackingService;
+
+  /// Cache namespace for the link-domain list, bound to the credentials it was
+  /// issued for so a key change never reuses another tenant's list.
+  late String _domainCacheNamespace;
 
   DeepLinkData? _lastDeepLink;
   final StreamController<DeepLinkData> _deepLinkStreamController =
@@ -74,6 +80,24 @@ class SmartLinkSdk {
       sdk._deferredLinkService = DeferredLinkService(config: config);
       sdk._deepLinkHandler = DeepLinkHandler();
 
+      // ── Link domains ──
+      // Nothing tenant-specific is compiled into the SDK: the host list comes
+      // from the backend, scoped to this API key. Restore the cached copy
+      // first so a cold start (or an offline launch) can still tell our links
+      // from external ones before the network answers.
+      sdk._domainCacheNamespace = LinkDomainRegistry.cacheNamespaceFor(
+        apiKey: config.tenantApiKey,
+        apiBaseUrl: config.apiBaseUrl,
+      );
+      sdk._domainRegistry = LinkDomainRegistry(
+        apiBaseUrl: config.apiBaseUrl,
+        configuredDomains: config.linkDomains,
+        storageService: sdk._storageService,
+      );
+      await sdk._domainRegistry.restoreFromCache(
+        cacheNamespace: sdk._domainCacheNamespace,
+      );
+
       // ── STEP 0.5: Capture launch URI before init ──
       // If the app was opened via a deep link, grab it now so we can
       // send the source/UTM params with the init call.
@@ -104,7 +128,10 @@ class SmartLinkSdk {
       }
 
       // ── STEP 3: Setup deep link handler ──
+      // The registry is passed after STEP 1, so by the time the handler sees
+      // its first URL the domain list has been refreshed from the backend.
       sdk._deepLinkHandler.setConfig(config);
+      sdk._deepLinkHandler.setDomainRegistry(sdk._domainRegistry);
 
       // Subscribe BEFORE initialize so we don't miss the initial link.
       // Broadcast streams don't buffer — if we subscribe after initialize(),
@@ -166,8 +193,12 @@ class SmartLinkSdk {
         buildNumber = info.buildNumber;
       } catch (_) {}
 
-      // Extract source params from launch URI — only for SmartLink domain URLs.
-      // External deep links are ignored for attribution tracking.
+      // Extract source params from launch URI — only for our own link domains,
+      // so an external URL carrying utm_* is never credited as a SmartLink.
+      //
+      // On the very first launch the cache is empty and this yields nothing.
+      // launchUrl is sent raw below and the backend, which always knows the
+      // domains, derives the attribution instead.
       String? launchSource;
       String? launchMedium;
       String? launchCampaign;
@@ -224,6 +255,17 @@ class SmartLinkSdk {
           if (result['appValid'] == false && result['appWarning'] != null) {
             SmartLinkLogger.warning(
               'App mismatch: ${result['appWarning']}',
+            );
+          }
+
+          // ── Refresh the link domains for this app ──
+          // Scoped server-side to the authenticated key, so this only ever
+          // carries our own hosts. Cached for the next cold start.
+          final serverDomains = result['config']?['linkDomains'];
+          if (serverDomains is List) {
+            await sdk._domainRegistry.applyServerDomains(
+              serverDomains.whereType<String>().toList(),
+              cacheNamespace: sdk._domainCacheNamespace,
             );
           }
         }
@@ -517,11 +559,17 @@ class SmartLinkSdk {
     _instance = null;
   }
 
-  /// Check if a URI belongs to the SmartLink domain (from apiBaseUrl config).
-  static bool _isSmartLinkDomain(Uri uri) {
-    final smartLinkHost = Uri.parse(_config.apiBaseUrl).host.toLowerCase();
-    return uri.host.toLowerCase() == smartLinkHost;
-  }
+  /// Check if a URI belongs to one of this app's link domains.
+  /// Backed by the server-issued list — see [LinkDomainRegistry].
+  static bool _isSmartLinkDomain(Uri uri) =>
+      _sdkInstance._domainRegistry.isSmartLinkUrl(uri);
+
+  /// The link domains currently trusted by this install.
+  ///
+  /// Server-issued and cached on device; useful when debugging why a link was
+  /// classified as external.
+  static List<String> get linkDomains =>
+      _instance?._domainRegistry.trustedDomains ?? const [];
 
   /// Force check for deferred deep link (ignores first-launch check)
   static Future<DeepLinkData?> forceCheckDeferredLink() async {

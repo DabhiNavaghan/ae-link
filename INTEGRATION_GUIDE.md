@@ -143,6 +143,18 @@ Edit `android/app/src/main/AndroidManifest.xml`:
                     android:host="allevents.in"
                     android:pathPrefix="/event" />
             </intent-filter>
+
+            <!-- SmartLink short links — one <data> per link host, copied
+                 from Dashboard → Apps → your app → Link domains.
+                 No pathPrefix: short codes sit at the root (/xGJEQJR). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" android:host="smartlink.apps.allevents.app" />
+                <data android:scheme="https" android:host="YOUR-LINK-DOMAIN" />
+            </intent-filter>
         </activity>
 
         <!-- Flutter NativeView -->
@@ -207,6 +219,9 @@ Edit `ios/Runner/Info.plist` and add URL scheme:
     <key>com.apple.developer.associated-domains</key>
     <array>
         <string>applinks:allevents.in</string>
+        <!-- SmartLink hosts — one per link domain from the dashboard -->
+        <string>applinks:smartlink.apps.allevents.app</string>
+        <string>applinks:YOUR-LINK-DOMAIN</string>
     </array>
 
     <!-- ... rest of config ... -->
@@ -221,7 +236,14 @@ Edit `ios/Runner/Info.plist` and add URL scheme:
 3. Go to **Signing & Capabilities**
 4. Click **+ Capability**
 5. Search for and add **Associated Domains**
-6. Add domain: `applinks:allevents.in`
+6. Add every link host, one entry each — `applinks:allevents.in`,
+   `applinks:smartlink.apps.allevents.app`, and one per link domain listed in
+   **Dashboard → Apps → your app → Link domains**.
+
+   A host that is not listed here is never handed to the app by iOS, so the
+   SDK never sees the link — no `onDeepLink`, no attribution. This is the one
+   place domains must be named at build time; the SDK itself fetches its list
+   at runtime and ships with no domains compiled in.
 
 #### Step 3: Upload apple-app-site-association
 

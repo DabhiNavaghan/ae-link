@@ -2,6 +2,67 @@
 
 All notable changes to the AE-LINK Flutter SDK will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Link domains are now issued by the backend, not compiled into the SDK.**
+  The SDK previously matched only the exact `apiBaseUrl` host, so links on a
+  short-link subdomain were classified as *external* — silently dropped with
+  the default `handleExternalDeepLinks: false`, never resolved through
+  `/api/v1/links/resolve`, and excluded from launch attribution.
+
+  The fix is dynamic rather than a built-in list: `/api/v1/sdk/init` returns
+  the link domains **for the authenticated app only**, and the SDK caches them
+  on device. Nothing tenant-specific ships in the app binary, one tenant's
+  hosts are never sent to another's app, and adding a domain no longer needs
+  an SDK or app release. Manage the list in
+  **Dashboard → Apps → your app → Link domains**.
+
+### Added
+- `LinkDomainRegistry` — the single place that decides ours-vs-external,
+  replacing the two divergent copies of the check in `deep_link_handler.dart`
+  and `smartlink_sdk.dart`. Matching is anchored on a label boundary, so
+  `evil-example.com` never matches `*.example.com`. Entries too broad to be
+  safe (a bare TLD, `*.com`) are rejected by the SDK *and* the backend.
+- On-device cache of the domain list, namespaced by a hash of the API key and
+  base URL, so a key change never reuses a list issued to different
+  credentials. Restored before the first link is classified; entries older
+  than 30 days are discarded.
+- `SmartLinkSdk.linkDomains` — what this install currently trusts, for
+  debugging a link that came through as external.
+- `linkDomains` on `SmartLink` / `SmartLinkConfig` — an override for
+  self-hosted deployments that cannot rely on the server list. Not needed
+  otherwise.
+
+### Fixed
+- First-launch attribution no longer depends on the SDK knowing the domains.
+  The raw launch URL is sent to `/api/v1/sdk/init` and the backend — which
+  always knows the domains — derives `source` / `medium` / `campaign` /
+  `linkId` itself, and only when the URL's host is one of that app's own.
+- `DeepLinkData.rawUrl` on a resolved link keeps the host the link actually
+  arrived on, instead of being rebuilt from `apiBaseUrl`.
+
+### Security
+- The domain list is no longer discoverable by decompiling the SDK.
+- Domains are scoped server-side to the authenticated app, so an SDK client
+  cannot enumerate other tenants' hosts.
+- `SmartLinkConfig.toString()` no longer prints the domain list; domains are
+  logged at verbose level only, by count rather than by name.
+
+### Docs
+- README documents how the list is fetched, what is trusted before the first
+  successful init, and how to inspect it. The Android `<intent-filter>` and
+  iOS Associated Domains sections now use placeholders — that is the one place
+  hosts must still be named at build time, because the OS requires it.
+
+### Backend
+- `App.linkDomains` — per-app host list, editable through `PUT /api/v1/apps/:id`
+  and sanitized on write.
+- `getLinkDomainsForApp()` unions the DB field with the existing
+  `APP_HOST_MAP` env mapping, so deployments keep working before the field is
+  populated.
+- `lib/utils/link-domain-match.ts` — the matching rule, mirrored by the SDK.
+
 ## [1.1.0] - 2026-07-30
 
 Event and user tracking. The funnel used to stop at install; it now continues

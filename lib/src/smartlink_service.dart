@@ -62,11 +62,22 @@ class SmartLink {
   /// API request timeout in seconds
   final int timeoutSeconds;
 
-  /// Whether to handle external deep links (links not from the SmartLink domain).
+  /// Whether to handle external deep links (links not from a SmartLink domain).
   ///
   /// - `false` (default): Only dashboard-created links trigger callbacks.
   /// - `true`: All deep links (including external) are passed to onDeepLink.
+  ///
+  /// Links on your app's own link domains are never treated as external —
+  /// they are always resolved through the backend, whatever this flag says.
   final bool handleExternalDeepLinks;
+
+  /// Optional override: extra hosts to treat as first-party link domains.
+  ///
+  /// **Normally unnecessary.** Your app's link domains are managed in the
+  /// dashboard and fetched at init, so nothing tenant-specific is compiled
+  /// into the app. Set this only for a self-hosted deployment that cannot
+  /// rely on the server list. See [SmartLinkConfig.linkDomains].
+  final List<String> linkDomains;
 
   /// Whether event tracking is available at all.
   ///
@@ -94,6 +105,7 @@ class SmartLink {
     this.logLevel,
     this.timeoutSeconds = 30,
     this.handleExternalDeepLinks = false,
+    this.linkDomains = const [],
     this.enableEventTracking = true,
     this.enableAutomaticEvents = true,
   });
@@ -136,6 +148,7 @@ class SmartLink {
           logLevel: logLevel,
           requestTimeoutSeconds: timeoutSeconds,
           handleExternalDeepLinks: handleExternalDeepLinks,
+          linkDomains: linkDomains,
           enableEventTracking: enableEventTracking,
           enableAutomaticEvents: enableAutomaticEvents,
         ),
